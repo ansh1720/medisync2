@@ -158,8 +158,6 @@ function Dashboard() {
         }
         diseaseId = diseaseId.replace(/\s+/g, '-');
         
-        console.log(`Submit: Navigating to disease: ${diseaseId} from search: ${searchQuery.trim()}`);
-        
         // Navigate to disease details page
         navigate(`/disease/${diseaseId}`, { 
           state: { 
@@ -198,17 +196,11 @@ function Dashboard() {
     } else if (suggestion.type === 'disease') {
       // Create URL-friendly disease ID
       let diseaseId = suggestion.text.toLowerCase();
-      console.log('Original disease text:', suggestion.text);
-      console.log('Lowercase disease text:', diseaseId);
       // Handle special cases for proper URL mapping
       if (diseaseId === 'common cold') {
         diseaseId = 'common-cold';
-        console.log('Applied special case mapping to:', diseaseId);
       }
       diseaseId = diseaseId.replace(/\s+/g, '-');
-      console.log('Final diseaseId after space replacement:', diseaseId);
-      
-      console.log(`Navigating to disease: ${diseaseId} from search: ${suggestion.text}`);
       
       // Navigate to disease details page for disease information
       navigate(`/disease/${diseaseId}`, { 
@@ -263,17 +255,6 @@ function Dashboard() {
             <p className="text-lg text-gray-600 mb-6">
               Your health dashboard - track your wellness journey
             </p>
-            
-            {/* DEBUG: Test Navigation Links */}
-            <div className="mb-4 p-4 bg-yellow-100 border border-yellow-400 rounded max-w-2xl mx-auto">
-              <h3 className="text-sm font-bold text-yellow-800 mb-2">DEBUG: Test Disease Navigation</h3>
-              <div className="space-x-2">
-                <Link to="/disease/diabetes" className="text-blue-600 underline">Test Diabetes</Link>
-                <Link to="/disease/asthma" className="text-blue-600 underline">Test Asthma</Link>
-                <Link to="/disease/migraine" className="text-blue-600 underline">Test Migraine</Link>
-                <Link to="/disease/common-cold" className="text-blue-600 underline">Test Common Cold</Link>
-              </div>
-            </div>
             
             {/* Smart Health Search Bar */}
             <div className="max-w-2xl mx-auto relative">

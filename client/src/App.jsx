@@ -41,7 +41,11 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route
               path="/dashboard"
-              element={<Dashboard />}
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
             />
             <Route
               path="/risk-assessment"
@@ -101,7 +105,11 @@ function App() {
             />
             <Route
               path="/disease/:diseaseId"
-              element={<DiseaseDetails />}
+              element={
+                <ProtectedRoute>
+                  <DiseaseDetails />
+                </ProtectedRoute>
+              }
             />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />

@@ -47,8 +47,6 @@ function DiseaseDetails() {
   const [activeTab, setActiveTab] = useState('overview');
   const [relatedDiseases, setRelatedDiseases] = useState([]);
 
-  console.log('DiseaseDetails component loaded with diseaseId:', diseaseId);
-
   // Mock disease data (in real app, this would come from API)
   const mockDiseases = {
     'diabetes': {
@@ -259,13 +257,11 @@ function DiseaseDetails() {
   };
 
   useEffect(() => {
-    // Simulate API call
     setIsLoading(true);
+    
+    // Simulate API call
     setTimeout(() => {
       const searchQuery = location.state?.searchQuery || diseaseId;
-      
-      console.log(`DiseaseDetails: Looking for disease with ID: ${diseaseId}, search query: ${searchQuery}`);
-      console.log('Available diseases:', Object.keys(mockDiseases));
       
       // Try multiple ways to find the disease
       let foundDisease = mockDiseases[diseaseId]; // Direct ID match
@@ -279,16 +275,15 @@ function DiseaseDetails() {
         );
       }
       
-      console.log('Found disease:', foundDisease?.name || 'Not found');
-      
       if (foundDisease) {
         setDisease(foundDisease);
-        // Mock related diseases
+        // Set related diseases
         setRelatedDiseases(
           Object.values(mockDiseases)
             .filter(d => d.id !== foundDisease.id && d.category === foundDisease.category)
             .slice(0, 3)
         );
+        toast.success(`Loaded information for ${foundDisease.name}`);
       } else {
         console.error(`Disease not found for ID: ${diseaseId}, search: ${searchQuery}`);
         toast.error('Disease not found');
