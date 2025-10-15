@@ -12,6 +12,7 @@ import DoctorConsultation from './pages/DoctorConsultation';
 import CommunityForum from './pages/CommunityForum';
 import HealthNews from './pages/HealthNews';
 import UserProfile from './pages/UserProfile';
+import DiseaseDetails from './pages/DiseaseDetails';
 
 function App() {
   return (
@@ -40,11 +41,7 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route
               path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
+              element={<Dashboard />}
             />
             <Route
               path="/risk-assessment"
@@ -101,6 +98,10 @@ function App() {
                   <UserProfile />
                 </ProtectedRoute>
               }
+            />
+            <Route
+              path="/disease/:diseaseId"
+              element={<DiseaseDetails />}
             />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />

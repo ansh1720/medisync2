@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   ChartBarIcon,
   HeartIcon,
@@ -11,12 +11,23 @@ import {
   CalendarDaysIcon,
   ClockIcon,
   UserGroupIcon,
-  BellIcon
+  BellIcon,
+  MagnifyingGlassIcon,
+  SparklesIcon
 } from '@heroicons/react/24/outline';
 import Navbar from '../components/Navbar';
+import toast from 'react-hot-toast';
 
 function Dashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchSuggestions, setSearchSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  
   const [healthMetrics, setHealthMetrics] = useState({
     riskScore: 15,
     lastAssessment: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
@@ -87,6 +98,128 @@ function Dashboard() {
     }
   ]);
 
+  // Mock search suggestions data
+  const mockSearchSuggestions = [
+    { id: 1, type: 'symptom', text: 'fever', description: 'High body temperature' },
+    { id: 2, type: 'symptom', text: 'headache', description: 'Pain in head or neck' },
+    { id: 3, type: 'symptom', text: 'chest pain', description: 'Pain in chest area' },
+    { id: 4, type: 'symptom', text: 'shortness of breath', description: 'Difficulty breathing' },
+    { id: 5, type: 'disease', text: 'diabetes', description: 'Blood sugar management' },
+    { id: 6, type: 'disease', text: 'hypertension', description: 'High blood pressure' },
+    { id: 7, type: 'disease', text: 'asthma', description: 'Breathing disorder' },
+    { id: 8, type: 'disease', text: 'common cold', description: 'Viral infection' },
+    { id: 9, type: 'symptom', text: 'cough', description: 'Throat irritation' },
+    { id: 10, type: 'symptom', text: 'fatigue', description: 'Extreme tiredness' },
+    { id: 11, type: 'disease', text: 'migraine', description: 'Severe headache' },
+    { id: 12, type: 'symptom', text: 'nausea', description: 'Feeling sick' }
+  ];
+
+  // Search functionality
+  const handleSearchChange = (e) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+    
+    if (query.length >= 1) {
+      setIsSearching(true);
+      // Simulate API call delay
+      setTimeout(() => {
+        const filtered = mockSearchSuggestions
+          .filter(item => 
+            item.text.toLowerCase().includes(query.toLowerCase()) ||
+            item.description.toLowerCase().includes(query.toLowerCase())
+          )
+          .slice(0, 6);
+        setSearchSuggestions(filtered);
+        setShowSuggestions(true);
+        setIsSearching(false);
+      }, 300);
+    } else {
+      setSearchSuggestions([]);
+      setShowSuggestions(false);
+      setIsSearching(false);
+    }
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      // Check if the search query matches a disease in our suggestions
+      const matchingDisease = mockSearchSuggestions.find(item => 
+        item.type === 'disease' && 
+        item.text.toLowerCase().includes(searchQuery.trim().toLowerCase())
+      );
+      
+      if (matchingDisease) {
+        // Create URL-friendly disease ID
+        let diseaseId = matchingDisease.text.toLowerCase();
+        // Handle special cases for proper URL mapping
+        if (diseaseId === 'common cold') {
+          diseaseId = 'common-cold';
+        }
+        diseaseId = diseaseId.replace(/\s+/g, '-');
+        
+        console.log(`Submit: Navigating to disease: ${diseaseId} from search: ${searchQuery.trim()}`);
+        
+        // Navigate to disease details page
+        navigate(`/disease/${diseaseId}`, { 
+          state: { 
+            searchQuery: searchQuery.trim()
+          }
+        });
+      } else {
+        // Default to risk assessment with search as symptom
+        navigate('/risk-assessment', { 
+          state: { 
+            prefilledSymptom: searchQuery.trim(),
+            searchQuery: searchQuery.trim()
+          }
+        });
+      }
+      setSearchQuery('');
+      setShowSuggestions(false);
+    }
+  };
+
+  const handleSuggestionClick = (suggestion) => {
+    console.log('=== SUGGESTION CLICK DEBUG ===');
+    console.log('Selected suggestion:', suggestion);
+    setSearchQuery(suggestion.text);
+    setShowSuggestions(false);
+    
+    if (suggestion.type === 'symptom') {
+      console.log('Navigating to risk assessment for symptom:', suggestion.text);
+      // Navigate to risk assessment with selected symptom
+      navigate('/risk-assessment', { 
+        state: { 
+          prefilledSymptom: suggestion.text,
+          searchQuery: suggestion.text
+        }
+      });
+    } else if (suggestion.type === 'disease') {
+      // Create URL-friendly disease ID
+      let diseaseId = suggestion.text.toLowerCase();
+      console.log('Original disease text:', suggestion.text);
+      console.log('Lowercase disease text:', diseaseId);
+      // Handle special cases for proper URL mapping
+      if (diseaseId === 'common cold') {
+        diseaseId = 'common-cold';
+        console.log('Applied special case mapping to:', diseaseId);
+      }
+      diseaseId = diseaseId.replace(/\s+/g, '-');
+      console.log('Final diseaseId after space replacement:', diseaseId);
+      
+      console.log(`Navigating to disease: ${diseaseId} from search: ${suggestion.text}`);
+      
+      // Navigate to disease details page for disease information
+      navigate(`/disease/${diseaseId}`, { 
+        state: { 
+          searchQuery: suggestion.text
+        }
+      });
+    }
+    setSearchQuery('');
+  };
+
   const formatTimeAgo = (date) => {
     const now = new Date();
     const diff = now - date;
@@ -127,9 +260,119 @@ function Dashboard() {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Welcome back, {user?.name}!
             </h1>
-            <p className="text-lg text-gray-600">
+            <p className="text-lg text-gray-600 mb-6">
               Your health dashboard - track your wellness journey
             </p>
+            
+            {/* DEBUG: Test Navigation Links */}
+            <div className="mb-4 p-4 bg-yellow-100 border border-yellow-400 rounded max-w-2xl mx-auto">
+              <h3 className="text-sm font-bold text-yellow-800 mb-2">DEBUG: Test Disease Navigation</h3>
+              <div className="space-x-2">
+                <Link to="/disease/diabetes" className="text-blue-600 underline">Test Diabetes</Link>
+                <Link to="/disease/asthma" className="text-blue-600 underline">Test Asthma</Link>
+                <Link to="/disease/migraine" className="text-blue-600 underline">Test Migraine</Link>
+                <Link to="/disease/common-cold" className="text-blue-600 underline">Test Common Cold</Link>
+              </div>
+            </div>
+            
+            {/* Smart Health Search Bar */}
+            <div className="max-w-2xl mx-auto relative">
+              <form onSubmit={handleSearchSubmit} className="relative">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    className="block w-full pl-12 pr-12 py-4 border border-gray-300 rounded-2xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-lg shadow-lg"
+                    placeholder="Search symptoms, diseases, or health concerns..."
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    onFocus={() => searchQuery && setShowSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                  />
+                  <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
+                    {isSearching ? (
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>
+                    ) : (
+                      <SparklesIcon className="h-5 w-5 text-primary-500" />
+                    )}
+                  </div>
+                </div>
+              </form>
+              
+              {/* Search Suggestions */}
+              {showSuggestions && searchSuggestions.length > 0 && (
+                <div className="absolute z-50 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
+                  <div className="py-2">
+                    {searchSuggestions.map((suggestion) => (
+                      <div
+                        key={suggestion.id}
+                        className="px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
+                        onClick={() => handleSuggestionClick(suggestion)}
+                      >
+                        <div className="flex items-center">
+                          <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
+                            suggestion.type === 'symptom' 
+                              ? 'bg-red-100 text-red-600' 
+                              : 'bg-blue-100 text-blue-600'
+                          }`}>
+                            {suggestion.type === 'symptom' ? (
+                              <ExclamationTriangleIcon className="h-4 w-4" />
+                            ) : (
+                              <HeartIcon className="h-4 w-4" />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center">
+                              <span className="text-sm font-medium text-gray-900 capitalize">
+                                {suggestion.text}
+                              </span>
+                              <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
+                                suggestion.type === 'symptom' 
+                                  ? 'bg-red-100 text-red-700' 
+                                  : 'bg-blue-100 text-blue-700'
+                              }`}>
+                                {suggestion.type}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">{suggestion.description}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="px-4 py-2 bg-gray-50 border-t border-gray-200">
+                    <p className="text-xs text-gray-600 text-center">
+                      💡 Select a suggestion or press Enter to get personalized health insights
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Quick Search Tags */}
+              <div className="mt-4 flex flex-wrap justify-center gap-2">
+                <span className="text-sm text-gray-500 mr-2">Popular searches:</span>
+                {[
+                  { text: 'fever', type: 'symptom' },
+                  { text: 'headache', type: 'symptom' },
+                  { text: 'chest pain', type: 'symptom' },
+                  { text: 'diabetes', type: 'disease' },
+                  { text: 'hypertension', type: 'disease' }
+                ].map((tag) => (
+                  <button
+                    key={tag.text}
+                    onClick={() => {
+                      setSearchQuery(tag.text);
+                      handleSuggestionClick(tag);
+                    }}
+                    className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition-colors"
+                  >
+                    {tag.text}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Health Metrics Overview */}

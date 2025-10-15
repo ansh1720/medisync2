@@ -99,7 +99,7 @@ userSchema.index({ createdAt: -1 });
 userSchema.virtual('password')
   .set(function(password) {
     this._password = password;
-    this.passwordHash = bcrypt.hashSync(password, 12);
+    this.passwordHash = password; // Don't hash here, let pre-save handle it
   })
   .get(function() {
     return this._password;
