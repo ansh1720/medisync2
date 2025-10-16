@@ -17,18 +17,28 @@ const defaultUserId = new ObjectId();
 
 const sampleDoctors = [
   {
-    name: "Dr. Sarah Johnson",
-    email: "dr.johnson@medisync.com",
+    name: "Dr. Rajesh Kumar",
+    email: "dr.rajesh@medisync.com",
     specialty: "cardiology",
-    subSpecialties: ["interventional_cardiology"],
-    bio: "Board-certified cardiologist with 15 years of experience.",
+    subSpecialties: ["interventional_cardiology", "cardiac_catheterization"],
+    bio: "Renowned interventional cardiologist with expertise in complex cardiac procedures and heart disease management.",
     qualifications: {
-      degree: "MD",
-      university: "Harvard Medical School",
-      graduationYear: 2008
+      degree: "MBBS, DM Cardiology",
+      university: "AIIMS Delhi",
+      graduationYear: 2005
     },
-    experience: 15,
-    languages: ["en", "es"],
+    experience: 18,
+    languages: ["hi", "en"],
+    consultationFee: {
+      amount: 1200,
+      currency: "INR"
+    },
+    location: "Apollo Hospitals, Delhi",
+    hospital: "Apollo Hospitals Delhi",
+    rating: {
+      average: 4.9,
+      reviewCount: 245
+    },
     availability: [
       {
         dayOfWeek: "monday",
@@ -52,33 +62,43 @@ const sampleDoctors = [
       }
     ],
     contact: {
-      phone: "+12125550100"
+      phone: "+919876543210"
     },
     consultationFee: {
-      amount: 150,
-      currency: "USD"
+      amount: 1200,
+      currency: "INR"
     },
     rating: {
-      average: 4.8,
-      count: 125
+      average: 4.9,
+      reviewCount: 245
     },
     isAvailable: true,
     isVerified: true,
     userRef: defaultUserId
   },
   {
-    name: "Dr. Michael Chen",
-    email: "dr.chen@medisync.com",
-    specialty: "neurology", 
-    subSpecialties: ["stroke"],
-    bio: "Neurologist specializing in stroke treatment.",
+    name: "Dr. Priya Sharma",
+    email: "dr.priya@medisync.com",
+    specialty: "family_medicine", 
+    subSpecialties: ["family_medicine", "preventive_care"],
+    bio: "Dedicated general physician with extensive experience in family medicine and preventive healthcare.",
     qualifications: {
-      degree: "MD",
-      university: "Johns Hopkins School of Medicine",
-      graduationYear: 2010
+      degree: "MBBS, MD General Medicine",
+      university: "JIPMER Puducherry",
+      graduationYear: 2011
     },
     experience: 12,
-    languages: ["en"],
+    languages: ["hi", "en"],
+    consultationFee: {
+      amount: 800,
+      currency: "INR"
+    },
+    location: "Fortis Healthcare, Mumbai",
+    hospital: "Fortis Healthcare Mumbai",
+    rating: {
+      average: 4.7,
+      reviewCount: 189
+    },
     availability: [
       {
         dayOfWeek: "monday",
@@ -92,33 +112,25 @@ const sampleDoctors = [
       }
     ],
     contact: {
-      phone: "+12125550200"
-    },
-    consultationFee: {
-      amount: 180,
-      currency: "USD"
-    },
-    rating: {
-      average: 4.7,
-      count: 98
+      phone: "+919876543220"
     },
     isAvailable: true,
     isVerified: true,
     userRef: new ObjectId()
   },
   {
-    name: "Dr. Emily Rodriguez",
-    email: "dr.rodriguez@medisync.com",
+    name: "Dr. Anjali Mehta",
+    email: "dr.anjali@medisync.com",
     specialty: "pediatrics",
-    subSpecialties: ["adolescent_medicine"],
-    bio: "Pediatrician dedicated to children's health.",
+    subSpecialties: ["neonatology", "child_development"],
+    bio: "Compassionate pediatrician with extensive experience in child healthcare and developmental pediatrics.",
     qualifications: {
-      degree: "MD", 
-      university: "Stanford School of Medicine",
-      graduationYear: 2012
+      degree: "MBBS, MD Pediatrics", 
+      university: "AIIMS Delhi",
+      graduationYear: 2007
     },
-    experience: 10,
-    languages: ["en", "es"],
+    experience: 16,
+    languages: ["hi", "en"],
     availability: [
       {
         dayOfWeek: "wednesday",
@@ -132,15 +144,15 @@ const sampleDoctors = [
       }
     ],
     contact: {
-      phone: "+12125550300"
+      phone: "+919876543230"
     },
     consultationFee: {
-      amount: 120,
-      currency: "USD"
+      amount: 900,
+      currency: "INR"
     },
     rating: {
       average: 4.9,
-      count: 87
+      reviewCount: 312
     },
     isAvailable: true,
     isVerified: true,

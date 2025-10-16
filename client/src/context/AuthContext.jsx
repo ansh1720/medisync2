@@ -155,6 +155,8 @@ export function AuthProvider({ children }) {
   const logout = () => {
     localStorage.removeItem('medisync_token');
     localStorage.removeItem('medisync_user');
+    // Clear socket notification log on logout
+    sessionStorage.removeItem('socket_disabled_logged');
     dispatch({ type: 'LOGOUT' });
     toast.success('Logged out successfully');
   };
@@ -164,12 +166,25 @@ export function AuthProvider({ children }) {
     dispatch({ type: 'UPDATE_USER', payload: userData });
   };
 
+  const getRoleDashboard = (role) => {
+    switch (role) {
+      case 'admin':
+        return '/admin-dashboard';
+      case 'doctor':
+        return '/doctor-dashboard';
+      case 'user':
+      default:
+        return '/dashboard';
+    }
+  };
+
   const value = {
     ...state,
     login,
     register,
     logout,
     updateUser,
+    getRoleDashboard,
   };
 
   return (

@@ -36,10 +36,17 @@ app.use(cors({
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 500, // Increased limit for development with React StrictMode
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again later.'
+  },
+  // Skip rate limiting in development for localhost
+  skip: (req) => {
+    if (process.env.NODE_ENV === 'development') {
+      return req.ip === '127.0.0.1' || req.ip === '::1' || req.ip.includes('localhost');
+    }
+    return false;
   }
 });
 app.use('/api/', limiter);

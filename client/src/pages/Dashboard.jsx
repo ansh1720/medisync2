@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
+import { consultationAPI } from '../utils/api';
 import { 
   ChartBarIcon,
   HeartIcon,
@@ -13,13 +14,33 @@ import {
   UserGroupIcon,
   BellIcon,
   MagnifyingGlassIcon,
-  SparklesIcon
+  SparklesIcon,
+  DocumentTextIcon,
+  ChatBubbleLeftRightIcon,
+  VideoCameraIcon,
+  PhoneIcon,
+  PlusIcon,
+  StarIcon
 } from '@heroicons/react/24/outline';
 import Navbar from '../components/Navbar';
+import { useInteraction } from '../context/InteractionContext';
+import {
+  QuickSearchWidget,
+  PersonalizedActionsWidget,
+  RecentHealthActivityWidget,
+  HealthInsightsWidget,
+  FeatureDiscoveryWidget
+} from '../components/DynamicWidgets';
 import toast from 'react-hot-toast';
 
 function Dashboard() {
   const { user } = useAuth();
+  const { 
+    trackFeatureUsage, 
+    trackSearch, 
+    getDynamicDashboardLayout,
+    userInteractions 
+  } = useInteraction();
   const navigate = useNavigate();
   
   // Search state
@@ -41,6 +62,46 @@ function Dashboard() {
       total: 5
     }
   });
+
+  // Patient consultation data
+  const [consultationData, setConsultationData] = useState({
+    upcomingConsultations: [],
+    recentConsultations: [],
+    totalConsultations: 0,
+    pendingPrescriptions: 0,
+    favouriteDoctors: []
+  });
+
+  const [quickActions, setQuickActions] = useState([
+    { 
+      title: 'Book Consultation', 
+      description: 'Find and book a doctor',
+      icon: CalendarDaysIcon,
+      color: 'blue',
+      action: () => navigate('/consultations')
+    },
+    { 
+      title: 'Instant Consult', 
+      description: 'Connect with available doctor',
+      icon: ChatBubbleLeftRightIcon,
+      color: 'green',
+      action: () => handleInstantConsult()
+    },
+    { 
+      title: 'Health Records', 
+      description: 'View medical history',
+      icon: DocumentTextIcon,
+      color: 'purple',
+      action: () => navigate('/health-records')
+    },
+    { 
+      title: 'Prescriptions', 
+      description: 'View and order medicines',
+      icon: PlusIcon,
+      color: 'orange',
+      action: () => navigate('/prescriptions')
+    }
+  ]);
 
   const [recentActivity, setRecentActivity] = useState([
     {
@@ -114,6 +175,102 @@ function Dashboard() {
     { id: 12, type: 'symptom', text: 'nausea', description: 'Feeling sick' }
   ];
 
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      // Load consultation data from API
+      const consultationsResponse = await consultationAPI.getConsultations().catch(err => {
+        console.log('Consultations API not available, using mock data');
+        return null;
+      });
+
+      if (consultationsResponse?.data?.data) {
+        const consultations = consultationsResponse.data.data;
+        setConsultationData({
+          upcomingConsultations: consultations.upcoming || [],
+          recentConsultations: consultations.recent || [],
+          totalConsultations: consultations.total || 0,
+          pendingPrescriptions: consultations.pendingPrescriptions || 0,
+          favouriteDoctors: consultations.favouriteDoctors || []
+        });
+      } else {
+        // Mock consultation data
+        setConsultationData({
+          upcomingConsultations: [
+            {
+              id: 1,
+              doctorName: 'Dr. Rajesh Kumar',
+              specialty: 'Cardiology',
+              date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+              time: '10:30 AM',
+              type: 'video',
+              reason: 'Follow-up consultation'
+            },
+            {
+              id: 2,
+              doctorName: 'Dr. Priya Sharma',
+              specialty: 'General Medicine',
+              date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+              time: '2:00 PM',
+              type: 'chat',
+              reason: 'Prescription renewal'
+            }
+          ],
+          recentConsultations: [
+            {
+              id: 3,
+              doctorName: 'Dr. Vikram Singh',
+              specialty: 'Dermatology',
+              date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+              diagnosis: 'Mild eczema',
+              rating: 5
+            },
+            {
+              id: 4,
+              doctorName: 'Dr. Anjali Mehta',
+              specialty: 'Pediatrics',
+              date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+              diagnosis: 'Annual checkup - all normal',
+              rating: 4
+            }
+          ],
+          totalConsultations: 12,
+          pendingPrescriptions: 1,
+          favouriteDoctors: [
+            { name: 'Dr. Rajesh Kumar', specialty: 'Cardiology', rating: 4.9 },
+            { name: 'Dr. Vikram Singh', specialty: 'Dermatology', rating: 4.8 }
+          ]
+        });
+      }
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    }
+  };
+
+  // Track feature navigation
+  const handleFeatureNavigation = (feature, path, additionalData = {}) => {
+    trackFeatureUsage(feature, additionalData);
+    navigate(path);
+  };
+
+  const handleInstantConsult = () => {
+    trackFeatureUsage('consultations', { type: 'instant' });
+    toast.info('Connecting you with an available doctor...');
+    navigate('/consultations', { state: { instant: true } });
+  };
+
+  const getConsultationTypeIcon = (type) => {
+    switch (type) {
+      case 'video': return VideoCameraIcon;
+      case 'chat': return ChatBubbleLeftRightIcon;
+      case 'phone': return PhoneIcon;
+      default: return ChatBubbleLeftRightIcon;
+    }
+  };
+
   // Search functionality
   const handleSearchChange = (e) => {
     const query = e.target.value;
@@ -143,6 +300,9 @@ function Dashboard() {
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
+      // Track the search
+      trackSearch(searchQuery.trim(), 'dashboard');
+      
       // Check if the search query matches a disease in our suggestions
       const matchingDisease = mockSearchSuggestions.find(item => 
         item.type === 'disease' && 
@@ -165,11 +325,10 @@ function Dashboard() {
           }
         });
       } else {
-        // Default to risk assessment with search as symptom
-        navigate('/risk-assessment', { 
+        // Navigate to enhanced disease search instead of risk assessment
+        navigate('/diseases', { 
           state: { 
-            prefilledSymptom: searchQuery.trim(),
-            searchQuery: searchQuery.trim()
+            initialSearch: searchQuery.trim()
           }
         });
       }
@@ -185,12 +344,11 @@ function Dashboard() {
     setShowSuggestions(false);
     
     if (suggestion.type === 'symptom') {
-      console.log('Navigating to risk assessment for symptom:', suggestion.text);
-      // Navigate to risk assessment with selected symptom
-      navigate('/risk-assessment', { 
+      console.log('Navigating to disease search for symptom:', suggestion.text);
+      // Navigate to disease search with selected symptom
+      navigate('/diseases', { 
         state: { 
-          prefilledSymptom: suggestion.text,
-          searchQuery: suggestion.text
+          initialSearch: suggestion.text
         }
       });
     } else if (suggestion.type === 'disease') {
@@ -209,6 +367,7 @@ function Dashboard() {
         }
       });
     }
+    // Reset search query after navigation
     setSearchQuery('');
   };
 
@@ -244,15 +403,15 @@ function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
       <Navbar />
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
               Welcome back, {user?.name}!
             </h1>
-            <p className="text-lg text-gray-600 mb-6">
+            <p className="text-lg text-gray-600 dark:text-gray-300 mb-6">
               Your health dashboard - track your wellness journey
             </p>
             
@@ -265,7 +424,7 @@ function Dashboard() {
                   </div>
                   <input
                     type="text"
-                    className="block w-full pl-12 pr-12 py-4 border border-gray-300 rounded-2xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-lg shadow-lg"
+                    className="block w-full pl-12 pr-12 py-4 border border-gray-300 dark:border-gray-600 rounded-2xl leading-5 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:placeholder-gray-400 dark:focus:placeholder-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-lg shadow-lg transition-colors duration-200"
                     placeholder="Search symptoms, diseases, or health concerns..."
                     value={searchQuery}
                     onChange={handleSearchChange}
@@ -284,19 +443,19 @@ function Dashboard() {
               
               {/* Search Suggestions */}
               {showSuggestions && searchSuggestions.length > 0 && (
-                <div className="absolute z-50 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
+                <div className="absolute z-50 w-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-xl overflow-hidden">
                   <div className="py-2">
                     {searchSuggestions.map((suggestion) => (
                       <div
                         key={suggestion.id}
-                        className="px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
+                        className="px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-b-0"
                         onClick={() => handleSuggestionClick(suggestion)}
                       >
                         <div className="flex items-center">
                           <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
                             suggestion.type === 'symptom' 
-                              ? 'bg-red-100 text-red-600' 
-                              : 'bg-blue-100 text-blue-600'
+                              ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400' 
+                              : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
                           }`}>
                             {suggestion.type === 'symptom' ? (
                               <ExclamationTriangleIcon className="h-4 w-4" />
@@ -306,7 +465,7 @@ function Dashboard() {
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center">
-                              <span className="text-sm font-medium text-gray-900 capitalize">
+                              <span className="text-sm font-medium text-gray-900 dark:text-white capitalize">
                                 {suggestion.text}
                               </span>
                               <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
@@ -353,6 +512,188 @@ function Dashboard() {
                   </button>
                 ))}
               </div>
+            </div>
+          </div>
+
+          {/* Quick Actions for Consultation */}
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Your Personalized Dashboard</h2>
+            
+            {/* Dynamic Widgets Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              {/* Left Column - Primary Widgets */}
+              <div className="lg:col-span-2 space-y-6">
+                <QuickSearchWidget />
+                <PersonalizedActionsWidget />
+                <RecentHealthActivityWidget />
+              </div>
+              
+              {/* Right Column - Secondary Widgets */}
+              <div className="space-y-6">
+                <HealthInsightsWidget />
+                <FeatureDiscoveryWidget />
+                
+                {/* Traditional Health Metrics Card */}
+                <div className="bg-white rounded-xl shadow-lg p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Health Metrics</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Risk Score</span>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        healthMetrics.riskScore < 20 ? 'bg-green-100 text-green-700' :
+                        healthMetrics.riskScore < 40 ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-red-100 text-red-700'
+                      }`}>
+                        {healthMetrics.riskScore}% - {healthMetrics.riskScore < 20 ? 'Low' : healthMetrics.riskScore < 40 ? 'Medium' : 'High'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Blood Pressure</span>
+                      <span className="text-sm font-medium">
+                        {healthMetrics.lastBpReading.systolic}/{healthMetrics.lastBpReading.diastolic}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Appointments</span>
+                      <span className="text-sm font-medium">{healthMetrics.upcomingAppointments} upcoming</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Actions for Consultation */}
+          <div className="mb-8" style={{ display: 'none' }}>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {quickActions.map((action, index) => {
+                const IconComponent = action.icon;
+                return (
+                  <button
+                    key={index}
+                    onClick={action.action}
+                    className={`p-6 bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 border-l-4 group ${
+                      action.color === 'blue' ? 'border-l-blue-500' :
+                      action.color === 'green' ? 'border-l-green-500' :
+                      action.color === 'purple' ? 'border-l-purple-500' :
+                      'border-l-orange-500'
+                    }`}
+                  >
+                    <div className="flex items-start">
+                      <div className={`p-3 rounded-lg transition-colors ${
+                        action.color === 'blue' ? 'bg-blue-100 group-hover:bg-blue-200' :
+                        action.color === 'green' ? 'bg-green-100 group-hover:bg-green-200' :
+                        action.color === 'purple' ? 'bg-purple-100 group-hover:bg-purple-200' :
+                        'bg-orange-100 group-hover:bg-orange-200'
+                      }`}>
+                        <IconComponent className={`h-6 w-6 ${
+                          action.color === 'blue' ? 'text-blue-600' :
+                          action.color === 'green' ? 'text-green-600' :
+                          action.color === 'purple' ? 'text-purple-600' :
+                          'text-orange-600'
+                        }`} />
+                      </div>
+                      <div className="ml-4 text-left">
+                        <h3 className="text-sm font-medium text-gray-900">{action.title}</h3>
+                        <p className="text-xs text-gray-500 mt-1">{action.description}</p>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Consultation Overview */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            {/* Upcoming Consultations */}
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Upcoming Consultations</h3>
+                <Link to="/consultations" className="text-primary-600 hover:text-primary-700 text-sm font-medium">
+                  View All
+                </Link>
+              </div>
+              {consultationData.upcomingConsultations.length > 0 ? (
+                <div className="space-y-4">
+                  {consultationData.upcomingConsultations.slice(0, 2).map((consultation) => {
+                    const IconComponent = getConsultationTypeIcon(consultation.type);
+                    return (
+                      <div key={consultation.id} className="flex items-center p-3 border border-gray-200 rounded-lg">
+                        <div className="flex-shrink-0">
+                          <div className="p-2 bg-blue-100 rounded-lg">
+                            <IconComponent className="h-5 w-5 text-blue-600" />
+                          </div>
+                        </div>
+                        <div className="ml-4 flex-1">
+                          <h4 className="text-sm font-medium text-gray-900">{consultation.doctorName}</h4>
+                          <p className="text-xs text-gray-500">{consultation.specialty}</p>
+                          <p className="text-xs text-gray-600">{consultation.reason}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-gray-900">
+                            {consultation.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </p>
+                          <p className="text-xs text-gray-500">{consultation.time}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <CalendarDaysIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-500">No upcoming consultations</p>
+                  <button 
+                    onClick={() => navigate('/consultations')}
+                    className="mt-2 text-primary-600 hover:text-primary-700 text-sm font-medium"
+                  >
+                    Book a consultation
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Recent Consultations */}
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Recent Consultations</h3>
+                <span className="text-sm text-gray-500">{consultationData.totalConsultations} total</span>
+              </div>
+              {consultationData.recentConsultations.length > 0 ? (
+                <div className="space-y-4">
+                  {consultationData.recentConsultations.slice(0, 2).map((consultation) => (
+                    <div key={consultation.id} className="flex items-center p-3 border border-gray-200 rounded-lg">
+                      <div className="flex-shrink-0">
+                        <div className="p-2 bg-green-100 rounded-lg">
+                          <CheckCircleIcon className="h-5 w-5 text-green-600" />
+                        </div>
+                      </div>
+                      <div className="ml-4 flex-1">
+                        <h4 className="text-sm font-medium text-gray-900">{consultation.doctorName}</h4>
+                        <p className="text-xs text-gray-500">{consultation.specialty}</p>
+                        <p className="text-xs text-gray-600">{consultation.diagnosis}</p>
+                      </div>
+                      <div className="text-right">
+                        <div className="flex items-center">
+                          {[...Array(consultation.rating)].map((_, i) => (
+                            <StarIcon key={i} className="h-3 w-3 text-yellow-400 fill-current" />
+                          ))}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {consultation.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <DocumentTextIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-500">No consultation history</p>
+                </div>
+              )}
             </div>
           </div>
 

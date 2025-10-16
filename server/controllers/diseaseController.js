@@ -5,6 +5,13 @@
 
 const { validationResult } = require('express-validator');
 const Disease = require('../models/Disease');
+const DiseaseDataParser = require('../utils/diseaseParser');
+
+// Initialize the disease parser for CSV data
+const diseaseParser = new DiseaseDataParser();
+
+// Load CSV data on startup
+diseaseParser.loadData().catch(console.error);
 
 /**
  * Get diseases with pagination, search, and filters
@@ -34,51 +41,44 @@ const getDiseases = async (req, res, next) => {
       sortOrder = 'asc'
     } = req.query;
 
-    // Build query
-    const query = { isActive: true };
+    // Use CSV data as primary source
+    let csvDiseases = diseaseParser.getAllDiseases();
     
+    // Apply filters to CSV data
     if (name) {
-      query.name = { $regex: name, $options: 'i' };
+      csvDiseases = csvDiseases.filter(disease => 
+        disease.name.toLowerCase().includes(name.toLowerCase())
+      );
     }
     
     if (symptom) {
-      query.symptoms = { $regex: symptom, $options: 'i' };
-    }
-    
-    if (category) {
-      query.category = category;
-    }
-    
-    if (severity) {
-      query.severity = severity;
-    }
-    
-    if (tags) {
-      const tagArray = Array.isArray(tags) ? tags : tags.split(',');
-      query.tags = { $in: tagArray };
+      csvDiseases = csvDiseases.filter(disease => 
+        disease.symptoms && disease.symptoms.some(s => 
+          s.toLowerCase().includes(symptom.toLowerCase())
+        )
+      );
     }
 
-    // Build sort object
-    const sort = {};
-    sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+    // Sort the results
+    csvDiseases.sort((a, b) => {
+      if (sortBy === 'name') {
+        return sortOrder === 'asc' 
+          ? a.name.localeCompare(b.name)
+          : b.name.localeCompare(a.name);
+      }
+      return 0;
+    });
 
-    // Execute query with pagination
+    // Apply pagination
+    const totalCount = csvDiseases.length;
     const skip = (parseInt(page) - 1) * parseInt(limit);
-    const diseases = await Disease.find(query)
-      .sort(sort)
-      .skip(skip)
-      .limit(parseInt(limit))
-      .populate('createdBy', 'name email')
-      .populate('lastModifiedBy', 'name email');
-
-    // Get total count for pagination
-    const totalCount = await Disease.countDocuments(query);
+    const paginatedDiseases = csvDiseases.slice(skip, skip + parseInt(limit));
     const totalPages = Math.ceil(totalCount / parseInt(limit));
 
     res.json({
       success: true,
       data: {
-        diseases,
+        diseases: paginatedDiseases,
         pagination: {
           currentPage: parseInt(page),
           totalPages,
@@ -87,7 +87,7 @@ const getDiseases = async (req, res, next) => {
           hasPrevPage: parseInt(page) > 1
         }
       },
-      message: 'Diseases retrieved successfully'
+      message: 'Diseases retrieved successfully from CSV data'
     });
 
   } catch (error) {
@@ -120,32 +120,23 @@ const searchDiseases = async (req, res, next) => {
       tags
     } = req.query;
 
-    const options = {
-      page: parseInt(page),
-      limit: parseInt(limit)
-    };
-
-    if (category) options.category = category;
-    if (severity) options.severity = severity;
-    if (tags) {
-      options.tags = Array.isArray(tags) ? tags : tags.split(',');
-    }
-
-    const diseases = await Disease.searchByText(q, options);
-    const totalCount = await Disease.countDocuments({
-      $text: { $search: q },
-      isActive: true,
-      ...(category && { category }),
-      ...(severity && { severity }),
-      ...(tags && { tags: { $in: Array.isArray(tags) ? tags : tags.split(',') } })
+    // Use CSV data for search
+    const searchResults = diseaseParser.searchDiseases(q, {
+      limit: parseInt(limit),
+      includeChartData: false,
+      sortBy: 'relevance'
     });
 
+    // Apply pagination to results
+    const totalCount = searchResults.length;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const paginatedResults = searchResults.slice(skip, skip + parseInt(limit));
     const totalPages = Math.ceil(totalCount / parseInt(limit));
 
     res.json({
       success: true,
       data: {
-        diseases,
+        diseases: paginatedResults,
         searchQuery: q,
         pagination: {
           currentPage: parseInt(page),
@@ -155,7 +146,7 @@ const searchDiseases = async (req, res, next) => {
           hasPrevPage: parseInt(page) > 1
         }
       },
-      message: 'Search completed successfully'
+      message: 'Search completed successfully using CSV data'
     });
 
   } catch (error) {
@@ -188,22 +179,26 @@ const findBySymptoms = async (req, res, next) => {
 
     const symptomArray = symptoms.split(',').map(s => s.trim());
     
-    const options = {
-      page: parseInt(page),
-      limit: parseInt(limit),
-      minMatches: parseInt(minMatches)
-    };
+    // Use CSV data for symptom-based search
+    const matchingDiseases = diseaseParser.findBySymptoms(symptomArray, {
+      minMatches: parseInt(minMatches),
+      limit: parseInt(limit)
+    });
 
-    const diseases = await Disease.findBySymptoms(symptomArray, options);
+    // Apply pagination
+    const totalCount = matchingDiseases.length;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const paginatedResults = matchingDiseases.slice(skip, skip + parseInt(limit));
 
     res.json({
       success: true,
       data: {
-        diseases,
+        diseases: paginatedResults,
         searchSymptoms: symptomArray,
-        minMatches: parseInt(minMatches)
+        minMatches: parseInt(minMatches),
+        totalMatches: totalCount
       },
-      message: 'Symptom-based search completed successfully'
+      message: 'Symptom-based search completed successfully using CSV data'
     });
 
   } catch (error) {
@@ -217,20 +212,55 @@ const findBySymptoms = async (req, res, next) => {
  */
 const getCategories = async (req, res, next) => {
   try {
-    const categories = await Disease.aggregate([
-      { $match: { isActive: true } },
-      { $group: { _id: '$category', count: { $sum: 1 } } },
-      { $sort: { count: -1 } }
-    ]);
+    // Use CSV data to get categories
+    const allDiseases = diseaseParser.getAllDiseases();
+    const categoryCount = {};
+
+    // Count diseases by category (using simple categorization based on disease name/type)
+    allDiseases.forEach(disease => {
+      const category = categorizeDiseaseByName(disease.name);
+      categoryCount[category] = (categoryCount[category] || 0) + 1;
+    });
+
+    const categories = Object.entries(categoryCount)
+      .map(([category, count]) => ({ _id: category, count }))
+      .sort((a, b) => b.count - a.count);
 
     res.json({
       success: true,
       data: { categories },
-      message: 'Categories retrieved successfully'
+      message: 'Categories retrieved successfully from CSV data'
     });
 
   } catch (error) {
     next(error);
+  }
+};
+
+// Helper function to categorize diseases
+const categorizeDiseaseByName = (diseaseName) => {
+  const name = diseaseName.toLowerCase();
+  
+  if (name.includes('heart') || name.includes('cardiac') || name.includes('blood pressure')) {
+    return 'cardiovascular';
+  } else if (name.includes('lung') || name.includes('breathing') || name.includes('respiratory')) {
+    return 'respiratory';
+  } else if (name.includes('diabetes') || name.includes('thyroid') || name.includes('hormone')) {
+    return 'endocrine';
+  } else if (name.includes('infection') || name.includes('virus') || name.includes('bacteria')) {
+    return 'infectious';
+  } else if (name.includes('cancer') || name.includes('tumor') || name.includes('malignant')) {
+    return 'cancer';
+  } else if (name.includes('mental') || name.includes('depression') || name.includes('anxiety')) {
+    return 'mental';
+  } else if (name.includes('digestive') || name.includes('stomach') || name.includes('bowel')) {
+    return 'digestive';
+  } else if (name.includes('bone') || name.includes('joint') || name.includes('muscle')) {
+    return 'musculoskeletal';
+  } else if (name.includes('brain') || name.includes('nerve') || name.includes('neurological')) {
+    return 'neurological';
+  } else {
+    return 'other';
   }
 };
 
@@ -523,6 +553,205 @@ const restoreDisease = async (req, res, next) => {
   }
 };
 
+/**
+ * Enhanced disease search with CSV data and charts
+ * @route GET /api/diseases/enhanced-search
+ */
+const enhancedSearch = async (req, res, next) => {
+  try {
+    // Check for validation errors first
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { query: searchQuery, limit = 10, includeCharts = false } = req.query;
+
+    if (!searchQuery || searchQuery.trim().length < 2) {
+      return res.status(400).json({
+        success: false,
+        message: 'Search query must be at least 2 characters long'
+      });
+    }
+
+    // Search in CSV data only (no MongoDB dependency)
+    const csvResults = diseaseParser.searchDiseases(searchQuery, {
+      limit: parseInt(limit),
+      includeChartData: includeCharts === 'true',
+      sortBy: 'relevance'
+    });
+
+    res.json({
+      success: true,
+      data: csvResults,
+      total: csvResults.length,
+      query: searchQuery,
+      hasCharts: includeCharts === 'true',
+      source: 'CSV data only'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get detailed disease information with charts
+ * @route GET /api/diseases/details/:name
+ */
+const getDiseaseDetailsWithCharts = async (req, res, next) => {
+  try {
+    const { name } = req.params;
+
+    if (!name) {
+      return res.status(400).json({
+        success: false,
+        message: 'Disease name is required'
+      });
+    }
+
+    // Try to get from CSV data first
+    let disease = diseaseParser.getDiseaseByName(decodeURIComponent(name));
+    
+    // If not found in CSV, try MongoDB
+    if (!disease) {
+      const mongoDisease = await Disease.findOne({
+        name: { $regex: new RegExp(name, 'i') },
+        isActive: true
+      });
+      
+      if (mongoDisease) {
+        disease = {
+          name: mongoDisease.name,
+          overview: mongoDisease.description,
+          symptoms: mongoDisease.symptoms || [],
+          cause: '',
+          prevention: mongoDisease.prevention?.join('; ') || '',
+          treatment: mongoDisease.treatment || '',
+          importance: '',
+          riskScore: mongoDisease.severity === 'high' ? 8 : mongoDisease.severity === 'medium' ? 5 : 3,
+          chartData: diseaseParser.generateChartData({
+            symptoms: mongoDisease.symptoms || [],
+            riskScore: mongoDisease.severity === 'high' ? 8 : mongoDisease.severity === 'medium' ? 5 : 3,
+            preventionMethods: {
+              lifestyle: [],
+              medical: [],
+              environmental: [],
+              behavioral: []
+            }
+          }),
+          source: 'database'
+        };
+      }
+    }
+
+    if (!disease) {
+      return res.status(404).json({
+        success: false,
+        message: 'Disease not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: disease
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get symptom-based disease suggestions
+ * @route POST /api/diseases/symptom-analysis
+ */
+const getSymptomBasedSuggestions = async (req, res, next) => {
+  try {
+    const { symptoms } = req.body;
+
+    if (!symptoms || !Array.isArray(symptoms) || symptoms.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Symptoms array is required'
+      });
+    }
+
+    const suggestions = [];
+    
+    // Search for each symptom in CSV data
+    for (const symptom of symptoms) {
+      const results = diseaseParser.searchDiseases(symptom, {
+        limit: 3,
+        includeChartData: false
+      });
+      
+      results.forEach(result => {
+        const existing = suggestions.find(s => s.name === result.name);
+        if (existing) {
+          existing.matchScore += result.relevanceScore;
+          existing.matchingSymptoms.push(symptom);
+        } else {
+          suggestions.push({
+            ...result,
+            matchScore: result.relevanceScore,
+            matchingSymptoms: [symptom]
+          });
+        }
+      });
+    }
+
+    // Sort by match score and limit results
+    const sortedSuggestions = suggestions
+      .sort((a, b) => b.matchScore - a.matchScore)
+      .slice(0, 10);
+
+    res.json({
+      success: true,
+      data: sortedSuggestions,
+      inputSymptoms: symptoms,
+      totalSuggestions: sortedSuggestions.length
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get disease statistics and analytics
+ * @route GET /api/diseases/statistics
+ */
+const getDiseaseStatistics = async (req, res, next) => {
+  try {
+    const csvStats = diseaseParser.getStatistics();
+    const mongoCount = await Disease.countDocuments({ isActive: true });
+
+    const combinedStats = {
+      csv: csvStats || {
+        totalDiseases: 0,
+        avgRiskScore: 0,
+        topSymptoms: [],
+        riskDistribution: { low: 0, medium: 0, high: 0 }
+      },
+      database: {
+        totalDiseases: mongoCount
+      },
+      combined: {
+        totalDiseases: (csvStats?.totalDiseases || 0) + mongoCount
+      }
+    };
+
+    res.json({
+      success: true,
+      data: combinedStats
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getDiseases,
   searchDiseases,
@@ -533,5 +762,10 @@ module.exports = {
   createDisease,
   updateDisease,
   deleteDisease,
-  restoreDisease
+  restoreDisease,
+  // Enhanced CSV-based functions
+  enhancedSearch,
+  getDiseaseDetailsWithCharts,
+  getSymptomBasedSuggestions,
+  getDiseaseStatistics
 };

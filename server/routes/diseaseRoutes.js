@@ -161,6 +161,56 @@ router.get('/search',
 );
 
 /**
+ * @route   GET /api/diseases/enhanced-search
+ * @desc    Enhanced disease search with CSV data and charts
+ * @access  Public
+ * @example GET /api/diseases/enhanced-search?query=fever&limit=5&includeCharts=true
+ */
+router.get('/enhanced-search',
+  [
+    query('query')
+      .trim()
+      .isLength({ min: 2 })
+      .withMessage('Search query must be at least 2 characters'),
+    query('limit')
+      .optional()
+      .isInt({ min: 1, max: 50 })
+      .withMessage('Limit must be between 1 and 50'),
+    query('includeCharts')
+      .optional()
+      .isBoolean()
+      .withMessage('Include charts must be a boolean')
+  ],
+  diseaseController.enhancedSearch
+);
+
+/**
+ * @route   GET /api/diseases/symptom-analysis
+ * @desc    Get disease suggestions based on symptoms
+ * @access  Public
+ * @example GET /api/diseases/symptom-analysis?symptoms=fever,headache,cough
+ */
+router.get('/symptom-analysis',
+  [
+    query('symptoms')
+      .trim()
+      .isLength({ min: 2 })
+      .withMessage('Symptoms parameter is required')
+  ],
+  diseaseController.getSymptomBasedSuggestions
+);
+
+/**
+ * @route   GET /api/diseases/statistics
+ * @desc    Get disease statistics and analytics
+ * @access  Public
+ * @example GET /api/diseases/statistics
+ */
+router.get('/statistics',
+  diseaseController.getDiseaseStatistics
+);
+
+/**
  * @route   GET /api/diseases/symptoms
  * @desc    Find diseases by symptoms
  * @access  Public
@@ -182,6 +232,22 @@ router.get('/symptoms',
  * @access  Public
  */
 router.get('/categories', diseaseController.getCategories);
+
+/**
+ * @route   GET /api/diseases/details/:name
+ * @desc    Get detailed disease information with charts
+ * @access  Public
+ * @example GET /api/diseases/details/Common%20Cold
+ */
+router.get('/details/:name',
+  [
+    param('name')
+      .trim()
+      .isLength({ min: 1 })
+      .withMessage('Disease name is required')
+  ],
+  diseaseController.getDiseaseDetailsWithCharts
+);
 
 /**
  * @route   GET /api/diseases/:id

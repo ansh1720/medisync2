@@ -24,6 +24,7 @@ import {
   ArcElement,
 } from 'chart.js';
 import Navbar from '../components/Navbar';
+import { useInteraction } from '../context/InteractionContext';
 import toast from 'react-hot-toast';
 
 // Register Chart.js components
@@ -42,10 +43,19 @@ ChartJS.register(
 function DiseaseDetails() {
   const { diseaseId } = useParams();
   const location = useLocation();
+  const { trackDiseaseInteraction, trackFeatureUsage } = useInteraction();
   const [disease, setDisease] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [relatedDiseases, setRelatedDiseases] = useState([]);
+
+  // Track page visit
+  useEffect(() => {
+    if (diseaseId) {
+      trackDiseaseInteraction('view', diseaseId);
+      trackFeatureUsage('diseaseDetails', { diseaseName: diseaseId });
+    }
+  }, [diseaseId]);
 
   // Mock disease data (in real app, this would come from API)
   const mockDiseases = {
@@ -429,18 +439,11 @@ function DiseaseDetails() {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <Link 
-              to="/dashboard" 
+              to="/diseases" 
               className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors"
             >
               <ArrowLeftIcon className="h-4 w-4 mr-2" />
-              Back to Dashboard
-            </Link>
-            <Link 
-              to="/risk-assessment" 
-              state={{ diseaseQuery: disease.name }}
-              className="btn btn-primary"
-            >
-              Check Risk Assessment
+              Back to Disease Search
             </Link>
           </div>
           
@@ -478,7 +481,13 @@ function DiseaseDetails() {
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    trackFeatureUsage('diseaseDetailsTab', { 
+                      tab: tab.id, 
+                      disease: diseaseId 
+                    });
+                  }}
                   className={`group inline-flex items-center py-4 px-1 border-b-2 font-medium text-sm ${
                     activeTab === tab.id
                       ? 'border-primary-500 text-primary-600'
@@ -650,11 +659,10 @@ function DiseaseDetails() {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
               <div className="space-y-3">
                 <Link 
-                  to="/risk-assessment" 
-                  state={{ diseaseQuery: disease.name }}
+                  to="/diseases" 
                   className="block w-full btn btn-primary text-center"
                 >
-                  Risk Assessment
+                  Search More Diseases
                 </Link>
                 <Link 
                   to="/hospitals" 

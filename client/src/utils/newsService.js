@@ -472,8 +472,8 @@ const getRandomCategory = () => {
 
 const getRandomAuthor = () => {
   const authors = [
-    'Dr. Sarah Johnson', 'Dr. Michael Chen', 'Dr. Emily Rodriguez', 'Dr. James Wilson',
-    'Dr. Lisa Thompson', 'Dr. David Kim', 'Dr. Maria Garcia', 'Dr. Robert Taylor'
+    'Dr. Rajesh Kumar', 'Dr. Priya Sharma', 'Dr. Vikram Singh', 'Dr. Anjali Mehta',
+    'Dr. Arjun Nair', 'Dr. Kavita Reddy', 'Dr. Ravi Patel', 'Dr. Sunita Gupta'
   ];
   return authors[Math.floor(Math.random() * authors.length)];
 };

@@ -1,10 +1,14 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
+import { InteractionProvider } from './context/InteractionContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import RoleBasedRedirect from './components/RoleBasedRedirect';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import AdminDashboard from './pages/AdminDashboard';
+import DoctorDashboard from './pages/DoctorDashboard';
 import RiskAssessment from './pages/RiskAssessment';
 import EquipmentReadings from './pages/EquipmentReadings';
 import HospitalLocator from './pages/HospitalLocator';
@@ -13,13 +17,19 @@ import CommunityForum from './pages/CommunityForum';
 import HealthNews from './pages/HealthNews';
 import UserProfile from './pages/UserProfile';
 import DiseaseDetails from './pages/DiseaseDetails';
+import EnhancedDiseaseSearch from './pages/EnhancedDiseaseSearch';
+import EnhancedDiseaseDetails from './pages/EnhancedDiseaseDetails';
+import HealthRecords from './pages/HealthRecords';
+import Prescriptions from './pages/Prescriptions';
+import DoctorPatients from './pages/DoctorPatients';
 
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <div className="App">
-          <Toaster
+      <InteractionProvider>
+        <Router>
+          <div className="App">
+            <Toaster
             position="top-right"
             toastOptions={{
               duration: 4000,
@@ -44,6 +54,30 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/doctor-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={['doctor']}>
+                  <DoctorDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/patients"
+              element={
+                <ProtectedRoute allowedRoles={['doctor']}>
+                  <DoctorPatients />
                 </ProtectedRoute>
               }
             />
@@ -111,11 +145,44 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            <Route
+              path="/diseases"
+              element={
+                <ProtectedRoute>
+                  <EnhancedDiseaseSearch />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/diseases/details/:name"
+              element={
+                <ProtectedRoute>
+                  <EnhancedDiseaseDetails />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/health-records"
+              element={
+                <ProtectedRoute>
+                  <HealthRecords />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/prescriptions"
+              element={
+                <ProtectedRoute>
+                  <Prescriptions />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/" element={<RoleBasedRedirect />} />
+            <Route path="*" element={<RoleBasedRedirect />} />
           </Routes>
         </div>
       </Router>
+      </InteractionProvider>
     </AuthProvider>
   );
 }

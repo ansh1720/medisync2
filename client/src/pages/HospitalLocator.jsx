@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useInteraction } from '../context/InteractionContext';
 import { hospitalAPI } from '../utils/api';
 import { MapPinIcon, PhoneIcon, GlobeAltIcon, StarIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
@@ -29,6 +30,7 @@ const DISTANCE_OPTIONS = [
 ];
 
 function HospitalLocator() {
+  const { trackFeatureUsage, trackSearch } = useInteraction();
   const [hospitals, setHospitals] = useState([]);
   const [allHospitals, setAllHospitals] = useState([]); // Store all hospitals
   const [filteredHospitals, setFilteredHospitals] = useState([]); // Filtered results for list view
@@ -47,6 +49,11 @@ function HospitalLocator() {
   const [viewMode, setViewMode] = useState('map'); // Default to 'map' to showcase the new map
   const [placeSearch, setPlaceSearch] = useState('');
   const [isSearchingPlace, setIsSearchingPlace] = useState(false);
+
+  // Track page visit
+  useEffect(() => {
+    trackFeatureUsage('hospitalLocator', { source: 'direct' });
+  }, []);
   const [currentLocationName, setCurrentLocationName] = useState('');
   const [dataSource, setDataSource] = useState('maps'); // Always use real data now
   const [isLoadingRealData, setIsLoadingRealData] = useState(false);
@@ -717,7 +724,7 @@ function HospitalLocator() {
                 {!userLocation && (
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                     <p className="text-sm text-blue-800">
-                      💡 <strong>Get Directions:</strong> Set your location above to enable "Get Directions" buttons that will open 
+                      <strong>Get Directions:</strong> Set your location above to enable "Get Directions" buttons that will open 
                       Google Maps with turn-by-turn navigation to any hospital.
                     </p>
                   </div>
@@ -725,7 +732,7 @@ function HospitalLocator() {
                 
                 {/* Advanced Place Search with Autocomplete */}
                 <div className="border rounded-lg p-4 bg-gray-50">
-                  <h4 className="font-medium text-gray-900 mb-3">🔍 Search Any Location or Hospital</h4>
+                  <h4 className="font-medium text-gray-900 mb-3">Search Any Location or Hospital</h4>
                   <div className="relative">
                     <div className="flex gap-3">
                       <div className="flex-1 relative">
@@ -763,7 +770,7 @@ function HospitalLocator() {
                                   <div className="flex-shrink-0 mr-2">
                                     {suggestion.type === 'hospital' ? (
                                       <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center">
-                                        <span className="text-red-600 text-xs">🏥</span>
+                                        <span className="text-red-600 text-xs">H</span>
                                       </div>
                                     ) : (
                                       <MapPinIcon className="h-4 w-4 text-gray-400" />
@@ -833,7 +840,7 @@ function HospitalLocator() {
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <p className="text-xs text-gray-600 w-full">
-                      💡 <strong>Smart Search:</strong> Type partial names like "va" for places (Vapi, Valsad) OR hospital names for direct filtering!
+                      <strong>Smart Search:</strong> Type partial names like "va" for places (Vapi, Valsad) OR hospital names for direct filtering!
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {['Mumbai', 'Delhi', 'Bangalore', 'Vapi', 'Valsad', 'Chennai'].map((city) => (
@@ -887,7 +894,7 @@ function HospitalLocator() {
                                 <div className="flex-shrink-0 mr-3">
                                   {suggestion.type === 'hospital' ? (
                                     <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                                      <span className="text-red-600 text-sm font-bold">🏥</span>
+                                      <span className="text-red-600 text-sm font-bold">H</span>
                                     </div>
                                   ) : (
                                     <MapPinIcon className="h-6 w-6 text-gray-400" />
@@ -977,7 +984,7 @@ function HospitalLocator() {
                     {viewMode === 'list' ? ' filtered' : ''} hospitals
                     {userLocation && ` near ${currentLocationName || 'your location'}`}
                     <span className="ml-2 px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
-                      🗺️ Real Hospital Data
+                      Real Hospital Data
                     </span>
                   </span>
                   {searchQuery && (
@@ -1190,14 +1197,14 @@ function HospitalLocator() {
                   }`}
                   title={!userLocation ? 'Set your location first to get directions' : `Get directions to ${hospital.name}`}
                 >
-                  {userLocation ? '🗺️ Get Directions' : '📍 Set Location First'}
+                  {userLocation ? 'Get Directions' : 'Set Location First'}
                 </button>
                 {hospital.contact?.phone && (
                   <a
                     href={`tel:${hospital.contact.phone}`}
                     className="btn btn-primary flex-1 text-sm text-center"
                   >
-                    📞 Call Now
+                    Call Now
                   </a>
                 )}
                 {hospital.contact?.website && (
@@ -1207,7 +1214,7 @@ function HospitalLocator() {
                     rel="noopener noreferrer"
                     className="btn btn-secondary flex-1 text-sm text-center"
                   >
-                    🌐 Website
+                    Website
                   </a>
                 )}
               </div>

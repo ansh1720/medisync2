@@ -227,17 +227,6 @@ router.get('/doctors',
 );
 
 /**
- * @route   GET /api/consultation/:id
- * @desc    Get specific consultation details
- * @access  Private
- */
-router.get('/:id',
-  verifyToken,
-  param('id').isMongoId().withMessage('Invalid consultation ID'),
-  consultationController.getConsultationById
-);
-
-/**
  * @route   PUT /api/consultation/:id/reschedule
  * @desc    Reschedule existing consultation
  * @access  Private
@@ -544,7 +533,9 @@ router.get('/upcoming',
  * @route   POST /api/consultation/bulk-availability
  * @desc    Check availability for multiple doctors
  * @access  Private
+ * @todo    Implement bulkCheckAvailability controller function
  */
+/*
 router.post('/bulk-availability',
   verifyToken,
   [
@@ -568,7 +559,19 @@ router.post('/bulk-availability',
       .isInt({ min: 15, max: 180 })
       .withMessage('Duration must be between 15 and 180 minutes')
   ],
-  consultationController.getBulkAvailability
+  consultationController.bulkCheckAvailability
+);
+*/
+
+/**
+ * @route   GET /api/consultation/:id
+ * @desc    Get specific consultation details
+ * @access  Private
+ */
+router.get('/:id',
+  verifyToken,
+  param('id').isMongoId().withMessage('Invalid consultation ID'),
+  consultationController.getConsultationById
 );
 
 module.exports = router;

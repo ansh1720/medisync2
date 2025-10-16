@@ -1,18 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { EyeIcon, EyeSlashIcon, UserIcon, ShieldCheckIcon, BeakerIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
 function Login() {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
+    role: 'user', // Add role selection
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, getRoleDashboard } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -20,9 +21,9 @@ function Login() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate(from, { replace: true });
+      // Don't redirect here anymore, let handleSubmit handle role-based navigation
     }
-  }, [isAuthenticated, navigate, from]);
+  }, [isAuthenticated]);
 
   const handleChange = (e) => {
     setFormData({
@@ -41,8 +42,11 @@ function Login() {
 
     setIsLoading(true);
     try {
-      await login(formData);
-      // Navigation will be handled by useEffect when authentication state changes
+      const response = await login(formData);
+      // Get user role from response and redirect to appropriate dashboard
+      const userRole = response.data?.user?.role || response.user?.role || formData.role;
+      const dashboardPath = getRoleDashboard(userRole);
+      navigate(dashboardPath, { replace: true });
     } catch (error) {
       console.error('Login error:', error);
       // Error is already handled and displayed by the AuthContext login method
@@ -114,6 +118,89 @@ function Login() {
                     <EyeIcon className="h-5 w-5 text-gray-400" />
                   )}
                 </button>
+              </div>
+            </div>
+            
+            {/* Role Selection */}
+            <div>
+              <label className="label">
+                Sign in as
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                {/* User Role */}
+                <label className={`relative flex cursor-pointer rounded-lg border p-4 focus:outline-none ${
+                  formData.role === 'user' 
+                    ? 'border-primary-600 bg-primary-50 text-primary-900' 
+                    : 'border-gray-300 bg-white text-gray-900 hover:bg-gray-50'
+                }`}>
+                  <input
+                    type="radio"
+                    name="role"
+                    value="user"
+                    className="sr-only"
+                    checked={formData.role === 'user'}
+                    onChange={handleChange}
+                  />
+                  <span className="flex flex-1">
+                    <span className="flex flex-col">
+                      <UserIcon className="h-6 w-6 mb-2" />
+                      <span className="block text-sm font-medium">Patient</span>
+                      <span className="mt-1 flex items-center text-xs text-gray-500">
+                        Regular user access
+                      </span>
+                    </span>
+                  </span>
+                </label>
+
+                {/* Doctor Role */}
+                <label className={`relative flex cursor-pointer rounded-lg border p-4 focus:outline-none ${
+                  formData.role === 'doctor' 
+                    ? 'border-blue-600 bg-blue-50 text-blue-900' 
+                    : 'border-gray-300 bg-white text-gray-900 hover:bg-gray-50'
+                }`}>
+                  <input
+                    type="radio"
+                    name="role"
+                    value="doctor"
+                    className="sr-only"
+                    checked={formData.role === 'doctor'}
+                    onChange={handleChange}
+                  />
+                  <span className="flex flex-1">
+                    <span className="flex flex-col">
+                      <BeakerIcon className="h-6 w-6 mb-2" />
+                      <span className="block text-sm font-medium">Doctor</span>
+                      <span className="mt-1 flex items-center text-xs text-gray-500">
+                        Medical professional
+                      </span>
+                    </span>
+                  </span>
+                </label>
+
+                {/* Admin Role */}
+                <label className={`relative flex cursor-pointer rounded-lg border p-4 focus:outline-none ${
+                  formData.role === 'admin' 
+                    ? 'border-red-600 bg-red-50 text-red-900' 
+                    : 'border-gray-300 bg-white text-gray-900 hover:bg-gray-50'
+                }`}>
+                  <input
+                    type="radio"
+                    name="role"
+                    value="admin"
+                    className="sr-only"
+                    checked={formData.role === 'admin'}
+                    onChange={handleChange}
+                  />
+                  <span className="flex flex-1">
+                    <span className="flex flex-col">
+                      <ShieldCheckIcon className="h-6 w-6 mb-2" />
+                      <span className="block text-sm font-medium">Admin</span>
+                      <span className="mt-1 flex items-center text-xs text-gray-500">
+                        System administrator
+                      </span>
+                    </span>
+                  </span>
+                </label>
               </div>
             </div>
           </div>

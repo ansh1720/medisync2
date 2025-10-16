@@ -263,7 +263,7 @@ function RiskAssessment() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Health Risk Assessment
@@ -283,30 +283,37 @@ function RiskAssessment() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Form Section */}
-          <div className="lg:col-span-2">
-            <form onSubmit={handleSubmit} className="card space-y-6">
+        <div className="space-y-8">
+          {/* Form Section - Full Width */}
+          <div className="card space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
               {/* Age Input */}
-              <div>
-                <label htmlFor="age" className="label">
-                  Age *
-                </label>
-                <input
-                  id="age"
-                  name="age"
-                  type="number"
-                  min="1"
-                  max="120"
-                  className="input"
-                  placeholder="Enter your age"
-                  value={formData.age}
-                  onChange={(e) => setFormData(prev => ({ ...prev, age: e.target.value }))}
-                  required
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div>
+                  <label htmlFor="age" className="label">
+                    Age *
+                  </label>
+                  <input
+                    id="age"
+                    name="age"
+                    type="number"
+                    min="1"
+                    max="120"
+                    className="input"
+                    placeholder="Enter your age"
+                    value={formData.age}
+                    onChange={(e) => setFormData(prev => ({ ...prev, age: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="sm:col-span-1 lg:col-span-3 flex items-end">
+                  <p className="text-sm text-gray-600">
+                    Enter your age to get a more accurate risk assessment based on age-related factors.
+                  </p>
+                </div>
               </div>
 
-              {/* Symptoms Selection */}
+              {/* Symptoms Selection - Horizontal Layout */}
               <div>
                 <label className="label mb-4">
                   Current Symptoms * (Select all that apply)
@@ -317,7 +324,7 @@ function RiskAssessment() {
                     <h4 className="text-sm font-semibold text-gray-700 mb-3 capitalize">
                       {category.replace('_', ' ')} Symptoms
                     </h4>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-3">
                       {symptoms.map((symptom) => (
                         <label
                           key={symptom.id}
@@ -336,14 +343,14 @@ function RiskAssessment() {
                             checked={formData.symptoms.includes(symptom.id)}
                             onChange={() => handleSymptomToggle(symptom.id)}
                           />
-                          <span className="text-sm font-medium">{symptom.label}</span>
+                          <span className="text-sm font-medium text-center w-full">{symptom.label}</span>
                           {searchHighlight === symptom.id && (
-                            <span className="ml-2 px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full">
+                            <span className="absolute -top-2 -right-2 px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full">
                               From search
                             </span>
                           )}
                           {formData.symptoms.includes(symptom.id) && (
-                            <CheckCircleIcon className="h-4 w-4 ml-auto text-primary-600" />
+                            <CheckCircleIcon className="absolute top-1 right-1 h-4 w-4 text-primary-600" />
                           )}
                         </label>
                       ))}
@@ -352,12 +359,12 @@ function RiskAssessment() {
                 ))}
               </div>
 
-              {/* Medical Conditions */}
+              {/* Medical Conditions - Horizontal Layout */}
               <div>
                 <label className="label mb-4">
                   Existing Medical Conditions (Optional)
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-3">
                   {MEDICAL_CONDITIONS.map((condition) => (
                     <label
                       key={condition}
@@ -375,11 +382,11 @@ function RiskAssessment() {
                         checked={formData.conditions.includes(condition)}
                         onChange={() => handleConditionToggle(condition)}
                       />
-                      <span className="text-sm font-medium capitalize">
+                      <span className="text-sm font-medium capitalize text-center w-full">
                         {condition.replace('_', ' ')}
                       </span>
                       {formData.conditions.includes(condition) && (
-                        <CheckCircleIcon className="h-4 w-4 ml-auto text-primary-600" />
+                        <CheckCircleIcon className="absolute top-1 right-1 h-4 w-4 text-primary-600" />
                       )}
                     </label>
                   ))}
@@ -387,147 +394,157 @@ function RiskAssessment() {
               </div>
 
               {/* Submit Button */}
-              <div className="pt-4">
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="btn btn-primary w-full py-3 text-lg"
-                >
-                  {isLoading ? (
-                    <div className="flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                      Calculating Risk...
-                    </div>
-                  ) : (
-                    'Calculate Risk Assessment'
-                  )}
-                </button>
+              <div className="pt-6 border-t border-gray-200">
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="btn btn-primary px-12 py-4 text-lg font-semibold min-w-[300px]"
+                  >
+                    {isLoading ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                        Calculating Risk...
+                      </div>
+                    ) : (
+                      'Calculate Risk Assessment'
+                    )}
+                  </button>
+                  <p className="text-sm text-gray-600 max-w-md text-center">
+                    Get personalized health recommendations based on your symptoms and medical history
+                  </p>
+                </div>
               </div>
             </form>
           </div>
 
-          {/* Results Section */}
-          <div className="lg:col-span-1">
-            {riskResult ? (
-              <div className="card space-y-6">
-                <h3 className="text-xl font-bold text-gray-900">Assessment Results</h3>
-                
-                {/* Critical Warning Banner */}
-                {riskResult.hasCriticalCombination && (
-                  <div className="bg-red-100 border-l-4 border-red-500 p-4 mb-4">
-                    <div className="flex">
-                      <div className="flex-shrink-0">
-                        <ExclamationTriangleIcon className="h-5 w-5 text-red-400" />
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm text-red-700 font-medium">
-                          ⚠️ Critical Symptom Pattern Detected
-                        </p>
-                        <p className="text-xs text-red-600 mt-1">
-                          {riskResult.criticalCombination?.description}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                {/* Risk Level */}
-                <div className={`p-4 rounded-lg ${getRiskColor(riskResult.riskLevel)}`}>
-                  <div className="flex items-center">
-                    {getRiskIcon(riskResult.riskLevel)}
-                    <div className="ml-3">
-                      <h4 className="text-lg font-semibold">
-                        {riskResult.riskLevel?.toUpperCase()} Risk
-                      </h4>
-                      <p className="text-sm opacity-75">
-                        Score: {riskResult.normalizedScore?.toFixed(1)} ({riskResult.riskPercentage}%)
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Enhanced Risk Breakdown */}
-                <div className="space-y-3">
-                  <h5 className="font-semibold text-gray-900">Risk Analysis:</h5>
-                  <div className="text-sm space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Base Symptom Score:</span>
-                      <span className="font-medium">{riskResult.breakdown?.baseScore}</span>
-                    </div>
-                    
-                    {riskResult.breakdown?.combinationMultiplier > 1 && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Combination Factor:</span>
-                        <span className="font-medium text-orange-600">×{riskResult.breakdown.combinationMultiplier}</span>
-                      </div>
-                    )}
-                    
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Age Factor ({riskResult.ageCategory}):</span>
-                      <span className="font-medium">×{riskResult.breakdown?.ageFactor}</span>
-                    </div>
-                    
-                    {riskResult.breakdown?.conditionsModifier > 1 && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Medical Conditions:</span>
-                        <span className="font-medium text-red-600">×{riskResult.breakdown.conditionsModifier?.toFixed(2)}</span>
-                      </div>
-                    )}
-                    
-                    <hr className="my-2" />
-                    <div className="flex justify-between font-semibold">
-                      <span className="text-gray-900">Final Risk Score:</span>
-                      <span className="text-lg">{riskResult.breakdown?.finalScore}</span>
-                    </div>
-                  </div>
-                  
-                  {/* Show dangerous combinations if detected */}
-                  {riskResult.dangerousCombinations && riskResult.dangerousCombinations.length > 0 && (
-                    <div className="mt-4 p-3 bg-orange-50 rounded-lg">
-                      <h6 className="text-sm font-medium text-orange-800 mb-2">⚠️ Warning Patterns Detected:</h6>
-                      {riskResult.dangerousCombinations.map((combo, index) => (
-                        <div key={index} className="text-xs text-orange-700 mb-1">
-                          • {combo.description} ({Math.round(combo.confidence * 100)}% match)
+          {/* Results Section - Full Width Below Form */}
+          {riskResult && (
+            <div className="card space-y-6">
+              <h3 className="text-2xl font-bold text-gray-900 text-center">Assessment Results</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+                {/* Risk Level Card */}
+                <div className="space-y-4">
+                  {/* Critical Warning Banner */}
+                  {riskResult.hasCriticalCombination && (
+                    <div className="bg-red-100 border-l-4 border-red-500 p-4">
+                      <div className="flex">
+                        <div className="flex-shrink-0">
+                          <ExclamationTriangleIcon className="h-5 w-5 text-red-400" />
                         </div>
-                      ))}
+                        <div className="ml-3">
+                          <p className="text-sm text-red-700 font-medium">
+                            ⚠️ Critical Symptom Pattern Detected
+                          </p>
+                          <p className="text-xs text-red-600 mt-1">
+                            {riskResult.criticalCombination?.description}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   )}
+                  
+                  {/* Risk Level */}
+                  <div className={`p-6 rounded-lg ${getRiskColor(riskResult.riskLevel)}`}>
+                    <div className="flex items-center">
+                      {getRiskIcon(riskResult.riskLevel)}
+                      <div className="ml-3">
+                        <h4 className="text-xl font-bold">
+                          {riskResult.riskLevel?.toUpperCase()} Risk
+                        </h4>
+                        <p className="text-sm opacity-75">
+                          Score: {riskResult.normalizedScore?.toFixed(1)} ({riskResult.riskPercentage}%)
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Recommendations */}
-                <div className="border-t pt-4">
-                  <h5 className="font-semibold text-gray-900 mb-2">Recommendations:</h5>
-                  <div className="text-sm text-gray-600 space-y-3">
+                {/* Risk Analysis Card */}
+                <div className="space-y-4">
+                  <h5 className="text-lg font-semibold text-gray-900">Risk Analysis</h5>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <div className="text-sm space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Base Symptom Score:</span>
+                        <span className="font-medium">{riskResult.breakdown?.baseScore}</span>
+                      </div>
+                      
+                      {riskResult.breakdown?.combinationMultiplier > 1 && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Combination Factor:</span>
+                          <span className="font-medium text-orange-600">×{riskResult.breakdown.combinationMultiplier}</span>
+                        </div>
+                      )}
+                      
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Age Factor ({riskResult.ageCategory}):</span>
+                        <span className="font-medium">×{riskResult.breakdown?.ageFactor}</span>
+                      </div>
+                      
+                      {riskResult.breakdown?.conditionsModifier > 1 && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Medical Conditions:</span>
+                          <span className="font-medium text-red-600">×{riskResult.breakdown.conditionsModifier?.toFixed(2)}</span>
+                        </div>
+                      )}
+                      
+                      <hr className="my-2" />
+                      <div className="flex justify-between font-semibold">
+                        <span className="text-gray-900">Final Risk Score:</span>
+                        <span className="text-lg">{riskResult.breakdown?.finalScore}</span>
+                      </div>
+                    </div>
+                    
+                    {/* Show dangerous combinations if detected */}
+                    {riskResult.dangerousCombinations && riskResult.dangerousCombinations.length > 0 && (
+                      <div className="mt-4 p-3 bg-orange-50 rounded-lg">
+                        <h6 className="text-sm font-medium text-orange-800 mb-2">⚠️ Warning Patterns Detected:</h6>
+                        {riskResult.dangerousCombinations.map((combo, index) => (
+                          <div key={index} className="text-xs text-orange-700 mb-1">
+                            • {combo.description} ({Math.round(combo.confidence * 100)}% match)
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Recommendations Card */}
+                <div className="space-y-4">
+                  <h5 className="text-lg font-semibold text-gray-900">Recommendations</h5>
+                  <div className="space-y-3">
                     
                     {/* Priority recommendations based on risk level */}
                     {riskResult.riskLevel === 'critical' && (
-                      <p className="text-red-600 font-medium p-2 bg-red-50 rounded">
+                      <p className="text-red-600 font-medium p-3 bg-red-50 rounded-lg">
                         ⚠️ Seek immediate medical attention
                       </p>
                     )}
                     {riskResult.riskLevel === 'high' && (
-                      <p className="text-orange-600 font-medium p-2 bg-orange-50 rounded">
+                      <p className="text-orange-600 font-medium p-3 bg-orange-50 rounded-lg">
                         📞 Contact a healthcare provider soon
                       </p>
                     )}
                     {riskResult.riskLevel === 'medium' && (
-                      <p className="text-yellow-600 font-medium p-2 bg-yellow-50 rounded">
+                      <p className="text-yellow-600 font-medium p-3 bg-yellow-50 rounded-lg">
                         🏥 Consider consulting a doctor
                       </p>
                     )}
                     {riskResult.riskLevel === 'low' && (
-                      <p className="text-green-600 font-medium p-2 bg-green-50 rounded">
+                      <p className="text-green-600 font-medium p-3 bg-green-50 rounded-lg">
                         ✅ Monitor symptoms and rest
                       </p>
                     )}
 
                     {/* Immediate recommendations */}
                     {riskResult.recommendations?.immediate && riskResult.recommendations.immediate.length > 0 && (
-                      <div>
-                        <h6 className="font-medium text-red-700 mb-1">🚨 Immediate Actions:</h6>
+                      <div className="bg-red-50 p-3 rounded-lg">
+                        <h6 className="font-medium text-red-700 mb-2">🚨 Immediate Actions:</h6>
                         {riskResult.recommendations.immediate.map((rec, index) => (
-                          <div key={index} className="flex items-start ml-2">
-                            <span className="text-red-500 mr-2">•</span>
+                          <div key={index} className="flex items-start text-sm text-red-600">
+                            <span className="mr-2">•</span>
                             <span>{rec}</span>
                           </div>
                         ))}
@@ -536,11 +553,11 @@ function RiskAssessment() {
 
                     {/* Short-term recommendations */}
                     {riskResult.recommendations?.shortTerm && riskResult.recommendations.shortTerm.length > 0 && (
-                      <div>
-                        <h6 className="font-medium text-orange-700 mb-1">📋 Short-term Care:</h6>
+                      <div className="bg-orange-50 p-3 rounded-lg">
+                        <h6 className="font-medium text-orange-700 mb-2">📋 Short-term Care:</h6>
                         {riskResult.recommendations.shortTerm.map((rec, index) => (
-                          <div key={index} className="flex items-start ml-2">
-                            <span className="text-orange-500 mr-2">•</span>
+                          <div key={index} className="flex items-start text-sm text-orange-600">
+                            <span className="mr-2">•</span>
                             <span>{rec}</span>
                           </div>
                         ))}
@@ -549,11 +566,11 @@ function RiskAssessment() {
 
                     {/* Lifestyle recommendations */}
                     {riskResult.recommendations?.lifestyle && riskResult.recommendations.lifestyle.length > 0 && (
-                      <div>
-                        <h6 className="font-medium text-blue-700 mb-1">💡 Lifestyle Tips:</h6>
+                      <div className="bg-blue-50 p-3 rounded-lg">
+                        <h6 className="font-medium text-blue-700 mb-2">💡 Lifestyle Tips:</h6>
                         {riskResult.recommendations.lifestyle.map((rec, index) => (
-                          <div key={index} className="flex items-start ml-2">
-                            <span className="text-blue-500 mr-2">•</span>
+                          <div key={index} className="flex items-start text-sm text-blue-600">
+                            <span className="mr-2">•</span>
                             <span>{rec}</span>
                           </div>
                         ))}
@@ -564,22 +581,25 @@ function RiskAssessment() {
                     {(!riskResult.recommendations?.immediate || riskResult.recommendations.immediate.length === 0) &&
                      (!riskResult.recommendations?.shortTerm || riskResult.recommendations.shortTerm.length === 0) &&
                      (!riskResult.recommendations?.lifestyle || riskResult.recommendations.lifestyle.length === 0) && (
-                      <div className="text-center py-2 text-gray-500">
+                      <div className="text-center py-4 text-gray-500 bg-gray-50 rounded-lg">
                         <p>Continue monitoring your symptoms and maintain healthy habits.</p>
                       </div>
                     )}
                   </div>
                 </div>
+              </div>
 
+              {/* Additional Information Row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                 {/* Potential Diseases */}
                 {riskResult.potentialDiseases && riskResult.potentialDiseases.length > 0 && (
-                  <div className="border-t pt-4">
-                    <h5 className="font-semibold text-gray-900 mb-2">Potential Conditions:</h5>
-                    <div className="space-y-2">
+                  <div className="bg-blue-50 p-6 rounded-lg">
+                    <h5 className="text-lg font-semibold text-gray-900 mb-4">Potential Conditions</h5>
+                    <div className="space-y-3">
                       {riskResult.potentialDiseases.slice(0, 3).map((disease, index) => (
-                        <div key={index} className="text-sm p-2 bg-blue-50 rounded">
+                        <div key={index} className="bg-white p-3 rounded-lg">
                           <div className="font-medium text-blue-900">{disease.name}</div>
-                          <div className="text-blue-700 text-xs">
+                          <div className="text-blue-700 text-sm mt-1">
                             Matching symptoms: {disease.matchingSymptoms?.join(', ')}
                           </div>
                         </div>
@@ -590,42 +610,46 @@ function RiskAssessment() {
 
                 {/* Nearby Hospitals */}
                 {riskResult.nearbyHospitals && riskResult.nearbyHospitals.length > 0 && (
-                  <div className="border-t pt-4">
-                    <h5 className="font-semibold text-gray-900 mb-2">Nearby Hospitals:</h5>
-                    <div className="space-y-2">
+                  <div className="bg-green-50 p-6 rounded-lg">
+                    <h5 className="text-lg font-semibold text-gray-900 mb-4">Nearby Hospitals</h5>
+                    <div className="space-y-3">
                       {riskResult.nearbyHospitals.slice(0, 2).map((hospital, index) => (
-                        <div key={index} className="text-sm p-2 bg-green-50 rounded">
+                        <div key={index} className="bg-white p-3 rounded-lg">
                           <div className="font-medium text-green-900">{hospital.name}</div>
-                          <div className="text-green-700 text-xs">
+                          <div className="text-green-700 text-sm mt-1">
                             {hospital.distance?.toFixed(1)} km • {hospital.phone}
                             {hospital.hasEmergency && <span className="ml-1 text-red-600">🚨 Emergency</span>}
                           </div>
                         </div>
                       ))}
                     </div>
+                    
+                    {/* Hospital Finder Link */}
+                    <div className="mt-4">
+                      <button className="btn btn-outline w-full">
+                        Find More Hospitals
+                      </button>
+                    </div>
                   </div>
                 )}
+              </div>
+            </div>
+          )}
 
-                {/* Hospital Finder Link */}
-                <div className="border-t pt-4">
-                  <button className="btn btn-outline w-full">
-                    Find More Hospitals
-                  </button>
-                </div>
+          {/* Placeholder when no results */}
+          {!riskResult && (
+            <div className="card">
+              <div className="text-center text-gray-500 py-8">
+                <svg className="mx-auto h-16 w-16 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <h3 className="text-lg font-medium text-gray-900 mt-4">Assessment Ready</h3>
+                <p className="mt-2 text-sm">
+                  Complete the assessment form above to see your personalized risk evaluation and recommendations
+                </p>
               </div>
-            ) : (
-              <div className="card">
-                <div className="text-center text-gray-500">
-                  <svg className="mx-auto h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  <p className="mt-2 text-sm">
-                    Complete the assessment form to see your personalized risk evaluation
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

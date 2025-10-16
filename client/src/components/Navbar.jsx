@@ -1,48 +1,126 @@
 import { Link, useLocation } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { SunIcon, MoonIcon } from '@heroicons/react/24/outline';
 import NotificationCenter from './NotificationCenter';
 
 function Navbar() {
-  const { user, logout } = useAuth();
+  const { user, logout, getRoleDashboard } = useAuth();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
-  const navigation = [
-    { name: 'Dashboard', href: '/dashboard' },
-    { name: 'Risk Assessment', href: '/risk-assessment' },
-    { name: 'Equipment Readings', href: '/equipment' },
-    { name: 'Find Hospitals', href: '/hospitals' },
-    { name: 'Consultations', href: '/consultations' },
-    { name: 'Community', href: '/forum' },
-    { name: 'Health News', href: '/news' },
-  ];
+  // Load dark mode preference from localStorage
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+      setIsDarkMode(true);
+      document.documentElement.classList.add('dark');
+      document.body.style.backgroundColor = '#111827';
+      document.body.style.color = '#f9fafb';
+    } else {
+      setIsDarkMode(false);
+      document.documentElement.classList.remove('dark');
+      document.body.style.backgroundColor = '#f8fafc';
+      document.body.style.color = '#1e293b';
+    }
+  }, []);
+
+  // Toggle dark mode
+  const toggleDarkMode = () => {
+    const newMode = !isDarkMode;
+    setIsDarkMode(newMode);
+    
+    if (newMode) {
+      document.documentElement.classList.add('dark');
+      document.body.style.backgroundColor = '#111827';
+      document.body.style.color = '#f9fafb';
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.body.style.backgroundColor = '#f8fafc';
+      document.body.style.color = '#1e293b';
+      localStorage.setItem('theme', 'light');
+    }
+  };
+
+  const getNavigationItems = () => {
+    const baseNavigation = [
+      { name: 'Dashboard', href: getRoleDashboard(user?.role || 'user') },
+    ];
+
+    // Role-specific navigation
+    if (user?.role === 'admin') {
+      return [
+        ...baseNavigation,
+        { name: 'User Management', href: '/admin/users' },
+        { name: 'System Monitor', href: '/admin/monitor' },
+        { name: 'Reports', href: '/admin/reports' },
+      ];
+    } else if (user?.role === 'doctor') {
+      return [
+        ...baseNavigation,
+        { name: 'My Patients', href: '/patients' },
+        { name: 'Appointments', href: '/consultations' },
+        { name: 'Medical Records', href: '/health-records' },
+        { name: 'Disease Search', href: '/diseases' },
+        { name: 'Community', href: '/forum' },
+      ];
+    } else {
+      return [
+        ...baseNavigation,
+        { name: 'Risk Assessment', href: '/risk-assessment' },
+        { name: 'Equipment Readings', href: '/equipment' },
+        { name: 'Disease Search', href: '/diseases' },
+        { name: 'Find Hospitals', href: '/hospitals' },
+        { name: 'Consultations', href: '/consultations' },
+        { name: 'Community', href: '/forum' },
+        { name: 'Health News', href: '/news' },
+      ];
+    }
+  };
+
+  const navigation = getNavigationItems();
 
   const isActive = (path) => {
     return location.pathname === path;
   };
 
   return (
-    <nav className="bg-white shadow-sm border-b">
+    <nav className="bg-white dark:bg-gray-900 shadow-lg border-b border-gray-200 dark:border-gray-700 transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
+        <div className="flex justify-between h-20">
           {/* Logo and Navigation */}
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
-              <Link to="/dashboard" className="text-2xl font-bold text-gradient">
-                MediSync
+              <Link to="/dashboard" className="flex items-center space-x-3 group">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow duration-300">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    MediSync
+                  </span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400 -mt-1 hidden sm:block">
+                    Healthcare Platform
+                  </span>
+                </div>
               </Link>
             </div>
-            <div className="hidden md:ml-8 md:flex md:space-x-8">
+            <div className="hidden lg:ml-12 lg:flex lg:space-x-1">
               {navigation.map((item) => (
                 <Link
                   key={item.name}
                   to={item.href}
                   className={`
-                    inline-flex items-center px-3 py-2 text-sm font-medium transition-colors rounded-md
+                    inline-flex items-center px-4 py-2 text-sm font-medium transition-all duration-200 rounded-lg
                     ${isActive(item.href)
-                      ? 'bg-primary-100 text-primary-700 border border-primary-200'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                      ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 shadow-sm ring-2 ring-blue-500/20'
+                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
                     }
                   `}
                 >
@@ -53,10 +131,10 @@ function Navbar() {
           </div>
 
           {/* Mobile menu button */}
-          <div className="md:hidden flex items-center">
+          <div className="lg:hidden flex items-center">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
+              className="inline-flex items-center justify-center p-3 rounded-lg text-gray-400 dark:text-gray-300 hover:text-gray-500 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
             >
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 {isMobileMenuOpen ? (
@@ -69,68 +147,116 @@ function Navbar() {
           </div>
 
           {/* User menu */}
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden lg:flex items-center space-x-4">
             <NotificationCenter />
-            <span className="text-sm text-gray-700">
-              Welcome, <span className="font-medium">{user?.name}</span>
-            </span>
-            <Link
-              to="/profile"
-              className="btn btn-secondary text-sm"
-            >
-              Profile
-            </Link>
+            
+            {/* Dark mode toggle */}
             <button
-              onClick={logout}
-              className="btn btn-outline text-sm"
+              onClick={toggleDarkMode}
+              className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
+              title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
             >
-              Logout
+              {isDarkMode ? (
+                <SunIcon className="h-5 w-5" />
+              ) : (
+                <MoonIcon className="h-5 w-5" />
+              )}
             </button>
+            
+            <div className="flex items-center space-x-3">
+              <div className="text-right">
+                <div className="text-sm font-medium text-gray-900 dark:text-white">
+                  {user?.name}
+                </div>
+                {user?.role && user.role !== 'user' && (
+                  <div className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+                    {user.role}
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center space-x-2">
+                <Link
+                  to="/profile"
+                  className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
+                >
+                  Profile
+                </Link>
+                <button
+                  onClick={logout}
+                  className="inline-flex items-center px-3 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors duration-200"
+                >
+                  Logout
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Mobile menu */}
       {isMobileMenuOpen && (
-        <div className="md:hidden">
-          <div className="pt-2 pb-3 space-y-1 border-t border-gray-200">
+        <div className="lg:hidden border-t border-gray-200 dark:border-gray-700">
+          <div className="px-2 pt-2 pb-3 space-y-1 bg-white dark:bg-gray-900">
             {navigation.map((item) => (
               <Link
                 key={item.name}
                 to={item.href}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={`
-                  block pl-3 pr-4 py-2 text-base font-medium transition-colors
+                  block px-3 py-3 rounded-lg text-base font-medium transition-colors duration-200
                   ${isActive(item.href)
-                    ? 'bg-primary-50 border-r-4 border-primary-500 text-primary-700'
-                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+                    ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
                   }
                 `}
               >
                 {item.name}
               </Link>
             ))}
-            <div className="pt-4 pb-3 border-t border-gray-200">
-              <div className="flex items-center px-4">
-                <span className="text-sm text-gray-700">
-                  Welcome, <span className="font-medium">{user?.name}</span>
-                </span>
+          </div>
+          
+          {/* Mobile user section */}
+          <div className="pt-4 pb-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+            <div className="flex items-center px-4 mb-3">
+              <div className="flex-1">
+                <div className="text-base font-medium text-gray-800 dark:text-white">
+                  {user?.name}
+                </div>
+                {user?.role && user.role !== 'user' && (
+                  <div className="text-sm text-gray-500 dark:text-gray-400 capitalize">
+                    {user.role}
+                  </div>
+                )}
               </div>
-              <div className="mt-3 px-4 space-y-2">
-                <Link
-                  to="/profile"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="btn btn-secondary text-sm w-full"
-                >
-                  Profile
-                </Link>
-                <button
-                  onClick={logout}
-                  className="btn btn-outline text-sm w-full"
-                >
-                  Logout
-                </button>
-              </div>
+              
+              {/* Mobile dark mode toggle */}
+              <button
+                onClick={toggleDarkMode}
+                className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
+                title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+              >
+                {isDarkMode ? (
+                  <SunIcon className="h-5 w-5" />
+                ) : (
+                  <MoonIcon className="h-5 w-5" />
+                )}
+              </button>
+            </div>
+            
+            <div className="px-4 space-y-2">
+              <Link
+                to="/profile"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block w-full text-left px-3 py-2 rounded-lg text-base font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200"
+              >
+                Profile
+              </Link>
+              <button
+                onClick={logout}
+                className="block w-full text-left px-3 py-2 rounded-lg text-base font-medium text-white bg-red-600 hover:bg-red-700 transition-colors duration-200"
+              >
+                Logout
+              </button>
             </div>
           </div>
         </div>

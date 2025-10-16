@@ -73,6 +73,15 @@ export const consultationAPI = {
   getConsultations: () => api.get('/consultation/my-consultations'),
   rescheduleConsultation: (id, data) => api.put(`/consultation/${id}/reschedule`, data),
   cancelConsultation: (id) => api.delete(`/consultation/${id}`),
+  
+  // Doctor-specific endpoints
+  getDoctorSchedule: (params) => api.get('/consultation/doctor/schedule', { params }),
+  getUpcomingConsultations: (params) => api.get('/consultation/upcoming', { params }),
+  getConsultationStats: (params) => api.get('/consultation/stats/overview', { params }),
+  completeConsultation: (id, data) => api.put(`/consultation/${id}/complete`, data),
+  addConsultationNotes: (id, data) => api.post(`/consultation/${id}/add-notes`, data),
+  addPrescription: (id, data) => api.post(`/consultation/${id}/prescription`, data),
+  joinConsultation: (id) => api.get(`/consultation/${id}/join`),
 };
 
 // Equipment API

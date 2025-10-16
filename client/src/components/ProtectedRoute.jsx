@@ -1,8 +1,8 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-function ProtectedRoute({ children }) {
-  const { isAuthenticated, loading } = useAuth();
+function ProtectedRoute({ children, allowedRoles = [] }) {
+  const { isAuthenticated, loading, user, getRoleDashboard } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -15,6 +15,13 @@ function ProtectedRoute({ children }) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // Check role-based access
+  if (allowedRoles.length > 0 && (!user?.role || !allowedRoles.includes(user.role))) {
+    // Redirect to user's appropriate dashboard if they don't have access
+    const userDashboard = getRoleDashboard(user?.role || 'user');
+    return <Navigate to={userDashboard} replace />;
   }
 
   return children;
