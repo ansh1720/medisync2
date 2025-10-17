@@ -14,7 +14,7 @@ function Navbar() {
       { name: 'Dashboard', href: getRoleDashboard(user?.role || 'user') },
       { name: 'Diseases', href: '/diseases' },
       { name: 'Risk Assessment', href: '/risk-assessment' },
-      { name: 'Consultation', href: '/consultation' },
+      { name: 'Consultation', href: '/consultations' },
       { name: 'Hospitals', href: '/hospitals' },
       { name: 'Health News', href: '/news' },
     ];
