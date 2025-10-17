@@ -724,13 +724,15 @@ const fetchDiverseMockData = async (options) => {
   const startIndex = (page - 1) * pageSize;
   const paginatedArticles = filteredArticles.slice(startIndex, startIndex + pageSize);
   
-  return {
+  const result = {
     success: true,
     articles: paginatedArticles,
     totalResults: filteredArticles.length,
     hasMore: startIndex + pageSize < filteredArticles.length,
     source: 'Diverse Health Sources (Mock Data)'
   };
+  
+  return result;
 };
 
 // Generate official health organization style articles
@@ -757,14 +759,18 @@ const generateOfficialHealthArticles = (count) => {
       _id: `official-${Date.now()}-${index}`,
       title: `${source} ${topic} ${condition}`,
       summary: `The ${source} has announced important updates regarding ${condition}. This comprehensive report outlines new protocols and recommendations for healthcare professionals and the public.`,
+      content: `The ${source} has announced important updates regarding ${condition}. This comprehensive report outlines new protocols and recommendations for healthcare professionals and the public. These guidelines are based on the latest scientific evidence and expert consensus. Healthcare providers are encouraged to review and implement these recommendations in their practice to improve patient outcomes.`,
+      category: 'official',
       author: `${source} Communications Team`,
+      source: source,
       publishedAt: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
       url: `https://${source.toLowerCase().replace(' ', '')}.gov/news/latest`,
       imageUrl: generateMockImageUrl('official'),
       tags: ['official', 'guidelines', condition.split(' ')[0]],
       readTime: Math.floor(Math.random() * 5) + 3,
       views: Math.floor(Math.random() * 10000) + 1000,
-      priority: Math.random() > 0.7 ? 'high' : 'medium'
+      priority: Math.random() > 0.7 ? 'high' : 'medium',
+      isBookmarked: false
     };
   });
 };
@@ -796,14 +802,18 @@ const generateResearchArticles = (count) => {
       _id: `research-${Date.now()}-${index}`,
       title: `${study} ${finding}`,
       summary: `A groundbreaking study published in ${journal} provides new insights into ${finding}. The research involved thousands of participants and offers promising implications for future treatments.`,
+      content: `A groundbreaking study published in ${journal} provides new insights into ${finding}. The research involved thousands of participants and offers promising implications for future treatments. The study methodology was rigorous, involving peer review and statistical analysis. Results show significant improvements in patient outcomes and provide a foundation for further research in this area.`,
+      category: 'research',
       author: `Dr. ${['Smith', 'Johnson', 'Williams', 'Brown', 'Davis'][index % 5]} et al.`,
+      source: journal,
       publishedAt: new Date(Date.now() - Math.random() * 14 * 24 * 60 * 60 * 1000).toISOString(),
       url: `https://${journal.toLowerCase().replace(' ', '')}.com/articles/latest`,
       imageUrl: generateMockImageUrl('research'),
       tags: ['research', 'study', 'medical'],
       readTime: Math.floor(Math.random() * 8) + 5,
       views: Math.floor(Math.random() * 5000) + 500,
-      priority: 'medium'
+      priority: 'medium',
+      isBookmarked: false
     };
   });
 };
@@ -829,14 +839,18 @@ const generateInternationalNewsArticles = (count) => {
       _id: `international-${Date.now()}-${index}`,
       title: `${event} ${location}`,
       summary: `${source} reports on significant health developments in ${location}. The story highlights global health cooperation and innovative approaches to addressing medical challenges worldwide.`,
+      content: `${source} reports on significant health developments in ${location}. The story highlights global health cooperation and innovative approaches to addressing medical challenges worldwide. Local authorities are working closely with international health organizations to ensure effective implementation of health initiatives and policies.`,
+      category: 'international',
       author: `${source} Health Correspondent`,
+      source: source,
       publishedAt: new Date(Date.now() - Math.random() * 3 * 24 * 60 * 60 * 1000).toISOString(),
       url: `https://${source.toLowerCase().replace(' ', '')}.com/health/international`,
       imageUrl: generateMockImageUrl('international'),
       tags: ['international', 'global health', location.toLowerCase()],
       readTime: Math.floor(Math.random() * 6) + 3,
       views: Math.floor(Math.random() * 15000) + 2000,
-      priority: Math.random() > 0.8 ? 'high' : 'low'
+      priority: Math.random() > 0.8 ? 'high' : 'low',
+      isBookmarked: false
     };
   });
 };
@@ -862,14 +876,18 @@ const generateHealthTechArticles = (count) => {
       _id: `healthtech-${Date.now()}-${index}`,
       title: `${company} ${development} ${tech}`,
       summary: `In a major advancement for digital health, ${company} has made significant progress with their ${tech}. This innovation promises to transform patient care and improve health outcomes globally.`,
+      content: `In a major advancement for digital health, ${company} has made significant progress with their ${tech}. This innovation promises to transform patient care and improve health outcomes globally. The technology leverages cutting-edge algorithms and user-friendly interfaces to provide accessible healthcare solutions for patients and providers alike.`,
+      category: 'technology',
       author: 'Health Tech Reporter',
+      source: company,
       publishedAt: new Date(Date.now() - Math.random() * 5 * 24 * 60 * 60 * 1000).toISOString(),
       url: `https://${company.toLowerCase().replace(' ', '')}.com/health/news`,
       imageUrl: generateMockImageUrl('technology'),
       tags: ['technology', 'innovation', 'digital health'],
       readTime: Math.floor(Math.random() * 7) + 4,
       views: Math.floor(Math.random() * 8000) + 1500,
-      priority: 'medium'
+      priority: 'medium',
+      isBookmarked: false
     };
   });
 };
