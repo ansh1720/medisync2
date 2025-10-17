@@ -39,7 +39,8 @@ function Dashboard() {
     trackFeatureUsage, 
     trackSearch, 
     getDynamicDashboardLayout,
-    userInteractions 
+    userInteractions,
+    clearRecentSearches
   } = useInteraction();
   const navigate = useNavigate();
   
@@ -343,6 +344,9 @@ function Dashboard() {
     setSearchQuery(suggestion.text);
     setShowSuggestions(false);
     
+    // Track the search when clicking suggestions
+    trackSearch(suggestion.text, 'dashboard-suggestion');
+    
     if (suggestion.type === 'symptom') {
       console.log('Navigating to disease search for symptom:', suggestion.text);
       // Navigate to disease search with selected symptom
@@ -491,26 +495,62 @@ function Dashboard() {
               )}
               
               {/* Quick Search Tags */}
-              <div className="mt-4 flex flex-wrap justify-center gap-2">
-                <span className="text-sm text-gray-500 mr-2">Popular searches:</span>
-                {[
-                  { text: 'fever', type: 'symptom' },
-                  { text: 'headache', type: 'symptom' },
-                  { text: 'chest pain', type: 'symptom' },
-                  { text: 'diabetes', type: 'disease' },
-                  { text: 'hypertension', type: 'disease' }
-                ].map((tag) => (
-                  <button
-                    key={tag.text}
-                    onClick={() => {
-                      setSearchQuery(tag.text);
-                      handleSuggestionClick(tag);
-                    }}
-                    className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition-colors"
-                  >
-                    {tag.text}
-                  </button>
-                ))}
+              <div className="mt-4">
+                {userInteractions.recentSearches.length > 0 ? (
+                  <div className="flex flex-wrap justify-center gap-2">
+                    <span className="text-sm text-gray-500 mr-2">Recent searches:</span>
+                    {userInteractions.recentSearches.slice(0, 5).map((search, index) => (
+                      <button
+                        key={`${search.query}-${index}`}
+                        onClick={() => {
+                          setSearchQuery(search.query);
+                          handleSuggestionClick({ text: search.query, type: search.type || 'general' });
+                        }}
+                        className="group px-3 py-1 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-full transition-all duration-200 border border-blue-200 hover:border-blue-300 hover:shadow-sm"
+                        title={`Searched ${formatTimeAgo(new Date(search.timestamp))}`}
+                      >
+                        <span className="flex items-center gap-1">
+                          {search.query}
+                          <span className="text-blue-500 opacity-60 group-hover:opacity-100 text-xs">
+                            ↗
+                          </span>
+                        </span>
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => {
+                        // Clear recent searches
+                        clearRecentSearches();
+                      }}
+                      className="px-2 py-1 text-xs text-gray-400 hover:text-red-500 transition-colors"
+                      title="Clear recent searches"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap justify-center gap-2">
+                    <span className="text-sm text-gray-500 mr-2">Popular searches:</span>
+                    {[
+                      { text: 'fever', type: 'symptom' },
+                      { text: 'headache', type: 'symptom' },
+                      { text: 'chest pain', type: 'symptom' },
+                      { text: 'diabetes', type: 'disease' },
+                      { text: 'hypertension', type: 'disease' }
+                    ].map((tag) => (
+                      <button
+                        key={tag.text}
+                        onClick={() => {
+                          setSearchQuery(tag.text);
+                          handleSuggestionClick(tag);
+                        }}
+                        className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition-colors"
+                      >
+                        {tag.text}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>

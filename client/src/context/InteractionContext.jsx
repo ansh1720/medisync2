@@ -258,6 +258,14 @@ export const InteractionProvider = ({ children }) => {
     };
   };
 
+  // Clear recent searches
+  const clearRecentSearches = () => {
+    setUserInteractions(prev => ({
+      ...prev,
+      recentSearches: []
+    }));
+  };
+
   const value = {
     userInteractions,
     trackFeatureUsage,
@@ -268,7 +276,8 @@ export const InteractionProvider = ({ children }) => {
     addToFavorites,
     getPersonalizedRecommendations,
     getDynamicDashboardLayout,
-    updatePreferredFeatures
+    updatePreferredFeatures,
+    clearRecentSearches
   };
 
   return (
