@@ -4,21 +4,21 @@ const NEWS_API_SOURCES = {
   // Primary API - NewsAPI (requires API key)
   newsapi: {
     baseUrl: 'https://newsapi.org/v2',
-    key: import.meta.env.VITE_NEWS_API_KEY || 'demo', // Set in .env file
+    key: import.meta.env.VITE_NEWS_API_KEY || null, // Only use if valid key is provided
     endpoint: '/everything'
   },
   
   // Fallback APIs for free tier
   gnews: {
     baseUrl: 'https://gnews.io/api/v4',
-    key: import.meta.env.VITE_GNEWS_API_KEY || 'demo',
+    key: import.meta.env.VITE_GNEWS_API_KEY || null,
     endpoint: '/search'
   },
   
   // Free news API (no key required)
   currentsapi: {
     baseUrl: 'https://api.currentsapi.services/v1',
-    key: import.meta.env.VITE_CURRENTS_API_KEY || 'demo',
+    key: import.meta.env.VITE_CURRENTS_API_KEY || null,
     endpoint: '/search'
   }
 };
@@ -82,31 +82,57 @@ export const fetchHealthNews = async (options = {}) => {
     language = 'en'
   } = options;
 
-  // Use different strategies based on page to ensure variety
-  const strategies = [
-    () => fetchFromPriorityHealthSources(options),
-    () => fetchFromInternationalSources(options),
-    () => fetchFromNewsAPI(options),
-    () => fetchFromGNews(options),
-    () => fetchFromCurrentsAPI(options),
-    () => fetchDiverseMockData(options)
-  ];
+  // Check if we have valid API keys, if not, go straight to mock data
+  const hasValidNewsAPIKey = NEWS_API_SOURCES.newsapi.key && NEWS_API_SOURCES.newsapi.key !== 'demo' && NEWS_API_SOURCES.newsapi.key.length > 10;
+  const hasValidGNewsKey = NEWS_API_SOURCES.gnews.key && NEWS_API_SOURCES.gnews.key !== 'demo' && NEWS_API_SOURCES.gnews.key.length > 10;
+  const hasValidCurrentsKey = NEWS_API_SOURCES.currentsapi.key && NEWS_API_SOURCES.currentsapi.key !== 'demo' && NEWS_API_SOURCES.currentsapi.key.length > 10;
 
-  // Rotate strategies based on page for variety
-  const primaryStrategy = strategies[page % strategies.length];
-  const fallbackStrategies = strategies.filter(s => s !== primaryStrategy);
+  // If no valid API keys are available, use mock data immediately
+  if (!hasValidNewsAPIKey && !hasValidGNewsKey && !hasValidCurrentsKey) {
+    console.info('No valid API keys found. Using mock health news data for demonstration.');
+    return await fetchDiverseMockData(options);
+  }
 
-  // Try primary strategy first
-  try {
-    const result = await primaryStrategy();
-    if (result.success && result.articles.length > 0) {
-      return {
-        ...result,
-        articles: deduplicateArticles(result.articles)
-      };
+  // Build strategies array based on available API keys
+  const strategies = [];
+  
+  if (hasValidNewsAPIKey) {
+    strategies.push(
+      () => fetchFromPriorityHealthSources(options),
+      () => fetchFromInternationalSources(options),
+      () => fetchFromNewsAPI(options)
+    );
+  }
+  
+  if (hasValidGNewsKey) {
+    strategies.push(() => fetchFromGNews(options));
+  }
+  
+  if (hasValidCurrentsKey) {
+    strategies.push(() => fetchFromCurrentsAPI(options));
+  }
+
+  // Always add mock data as fallback
+  strategies.push(() => fetchDiverseMockData(options));
+
+  // Rotate strategies based on page for variety (excluding mock data)
+  const apiStrategies = strategies.slice(0, -1);
+  const primaryStrategy = apiStrategies.length > 0 ? apiStrategies[page % apiStrategies.length] : null;
+  const fallbackStrategies = apiStrategies.filter(s => s !== primaryStrategy);
+
+  // Try primary strategy first (if available)
+  if (primaryStrategy) {
+    try {
+      const result = await primaryStrategy();
+      if (result.success && result.articles.length > 0) {
+        return {
+          ...result,
+          articles: deduplicateArticles(result.articles)
+        };
+      }
+    } catch (error) {
+      console.warn('Primary news source failed:', error.message);
     }
-  } catch (error) {
-    console.warn('Primary news source failed:', error.message);
   }
 
   // Try fallback strategies
@@ -125,13 +151,19 @@ export const fetchHealthNews = async (options = {}) => {
     }
   }
 
-  // If all sources fail, return diverse mock data
+  // If all API sources fail, return diverse mock data
+  console.info('All API sources failed. Using mock health news data.');
   return await fetchDiverseMockData(options);
 };
 
 // Fetch from priority health sources (WHO, CDC, NIH, etc.)
 const fetchFromPriorityHealthSources = async (options) => {
   const { page, pageSize, category, searchQuery } = options;
+  
+  // Check if we have a valid API key
+  if (!NEWS_API_SOURCES.newsapi.key || NEWS_API_SOURCES.newsapi.key === 'demo') {
+    throw new Error('No valid NewsAPI key for priority health sources');
+  }
   
   // Build query focusing on official health organizations
   let query = buildOfficialHealthQuery(category, searchQuery);
@@ -150,6 +182,11 @@ const fetchFromPriorityHealthSources = async (options) => {
     `apiKey=${NEWS_API_SOURCES.newsapi.key}`;
 
   const response = await fetch(url);
+  
+  if (!response.ok) {
+    throw new Error(`Priority health sources failed: ${response.status} ${response.statusText}`);
+  }
+  
   const data = await response.json();
 
   if (data.status === 'ok' && data.articles) {
@@ -169,6 +206,11 @@ const fetchFromPriorityHealthSources = async (options) => {
 const fetchFromInternationalSources = async (options) => {
   const { page, pageSize, category, searchQuery } = options;
   
+  // Check if we have a valid API key
+  if (!NEWS_API_SOURCES.newsapi.key || NEWS_API_SOURCES.newsapi.key === 'demo') {
+    throw new Error('No valid NewsAPI key for international sources');
+  }
+  
   const internationalSources = [
     'bbc.com', 'reuters.com', 'cnn.com', 'apnews.com', 'npr.org'
   ];
@@ -185,6 +227,11 @@ const fetchFromInternationalSources = async (options) => {
     `apiKey=${NEWS_API_SOURCES.newsapi.key}`;
 
   const response = await fetch(url);
+  
+  if (!response.ok) {
+    throw new Error(`International sources failed: ${response.status} ${response.statusText}`);
+  }
+  
   const data = await response.json();
 
   if (data.status === 'ok' && data.articles) {
@@ -204,6 +251,11 @@ const fetchFromInternationalSources = async (options) => {
 const fetchFromNewsAPI = async (options) => {
   const { page, pageSize, category, searchQuery } = options;
   
+  // Check if we have a valid API key
+  if (!NEWS_API_SOURCES.newsapi.key || NEWS_API_SOURCES.newsapi.key === 'demo') {
+    throw new Error('No valid NewsAPI key');
+  }
+  
   let query = buildHealthQuery(category, searchQuery);
   
   const url = `${NEWS_API_SOURCES.newsapi.baseUrl}${NEWS_API_SOURCES.newsapi.endpoint}?` +
@@ -217,23 +269,32 @@ const fetchFromNewsAPI = async (options) => {
   const response = await fetch(url);
   
   if (!response.ok) {
-    throw new Error(`NewsAPI error: ${response.status}`);
+    throw new Error(`NewsAPI error: ${response.status} ${response.statusText}`);
   }
 
   const data = await response.json();
   
-  return {
-    success: true,
-    articles: data.articles.map(transformNewsAPIArticle),
-    totalResults: data.totalResults,
-    hasMore: (page * pageSize) < data.totalResults,
-    source: 'NewsAPI'
-  };
+  if (data.status === 'ok' && data.articles) {
+    return {
+      success: true,
+      articles: data.articles.map(transformNewsAPIArticle),
+      totalResults: data.totalResults,
+      hasMore: (page * pageSize) < data.totalResults,
+      source: 'NewsAPI'
+    };
+  }
+
+  throw new Error('NewsAPI request failed');
 };
 
 // GNews implementation
 const fetchFromGNews = async (options) => {
   const { page, pageSize, category, searchQuery } = options;
+  
+  // Check if we have a valid API key
+  if (!NEWS_API_SOURCES.gnews.key || NEWS_API_SOURCES.gnews.key === 'demo') {
+    throw new Error('No valid GNews API key');
+  }
   
   let query = buildHealthQuery(category, searchQuery);
   
@@ -247,23 +308,32 @@ const fetchFromGNews = async (options) => {
   const response = await fetch(url);
   
   if (!response.ok) {
-    throw new Error(`GNews error: ${response.status}`);
+    throw new Error(`GNews error: ${response.status} ${response.statusText}`);
   }
 
   const data = await response.json();
   
-  return {
-    success: true,
-    articles: data.articles.map(transformGNewsArticle),
-    totalResults: data.totalArticles,
-    hasMore: data.articles.length === pageSize,
-    source: 'GNews'
-  };
+  if (data.articles) {
+    return {
+      success: true,
+      articles: data.articles.map(transformGNewsArticle),
+      totalResults: data.totalArticles,
+      hasMore: data.articles.length === pageSize,
+      source: 'GNews'
+    };
+  }
+
+  throw new Error('GNews request failed');
 };
 
 // CurrentsAPI implementation
 const fetchFromCurrentsAPI = async (options) => {
   const { page, pageSize, category, searchQuery } = options;
+  
+  // Check if we have a valid API key
+  if (!NEWS_API_SOURCES.currentsapi.key || NEWS_API_SOURCES.currentsapi.key === 'demo') {
+    throw new Error('No valid CurrentsAPI key');
+  }
   
   let query = buildHealthQuery(category, searchQuery);
   
@@ -277,18 +347,22 @@ const fetchFromCurrentsAPI = async (options) => {
   const response = await fetch(url);
   
   if (!response.ok) {
-    throw new Error(`CurrentsAPI error: ${response.status}`);
+    throw new Error(`CurrentsAPI error: ${response.status} ${response.statusText}`);
   }
 
   const data = await response.json();
   
-  return {
-    success: true,
-    articles: data.news.map(transformCurrentsAPIArticle),
-    totalResults: data.totalCount,
-    hasMore: data.news.length === pageSize,
-    source: 'CurrentsAPI'
-  };
+  if (data.news) {
+    return {
+      success: true,
+      articles: data.news.map(transformCurrentsAPIArticle),
+      totalResults: data.totalCount,
+      hasMore: data.news.length === pageSize,
+      source: 'CurrentsAPI'
+    };
+  }
+
+  throw new Error('CurrentsAPI request failed');
 };
 
 // Build health-focused search query
