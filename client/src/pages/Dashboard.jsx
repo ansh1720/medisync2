@@ -403,15 +403,15 @@ function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+    <div className="min-h-screen bg-gray-50 transition-colors duration-200">
       <Navbar />
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Welcome back, {user?.name}!
             </h1>
-            <p className="text-lg text-gray-600 dark:text-gray-300 mb-6">
+            <p className="text-lg text-gray-600 mb-6">
               Your health dashboard - track your wellness journey
             </p>
             
@@ -424,7 +424,7 @@ function Dashboard() {
                   </div>
                   <input
                     type="text"
-                    className="block w-full pl-12 pr-12 py-4 border border-gray-300 dark:border-gray-600 rounded-2xl leading-5 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:placeholder-gray-400 dark:focus:placeholder-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-lg shadow-lg transition-colors duration-200"
+                    className="block w-full pl-12 pr-12 py-4 border border-gray-300 rounded-2xl leading-5 bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-lg shadow-lg transition-colors duration-200"
                     placeholder="Search symptoms, diseases, or health concerns..."
                     value={searchQuery}
                     onChange={handleSearchChange}
@@ -443,19 +443,19 @@ function Dashboard() {
               
               {/* Search Suggestions */}
               {showSuggestions && searchSuggestions.length > 0 && (
-                <div className="absolute z-50 w-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-xl overflow-hidden">
+                <div className="absolute z-50 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
                   <div className="py-2">
                     {searchSuggestions.map((suggestion) => (
                       <div
                         key={suggestion.id}
-                        className="px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                        className="px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
                         onClick={() => handleSuggestionClick(suggestion)}
                       >
                         <div className="flex items-center">
                           <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
                             suggestion.type === 'symptom' 
-                              ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400' 
-                              : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                              ? 'bg-red-100 text-red-600' 
+                              : 'bg-blue-100 text-blue-600'
                           }`}>
                             {suggestion.type === 'symptom' ? (
                               <ExclamationTriangleIcon className="h-4 w-4" />
@@ -465,7 +465,7 @@ function Dashboard() {
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center">
-                              <span className="text-sm font-medium text-gray-900 dark:text-white capitalize">
+                              <span className="text-sm font-medium text-gray-900 capitalize">
                                 {suggestion.text}
                               </span>
                               <span className={`ml-2 px-2 py-1 text-xs rounded-full ${

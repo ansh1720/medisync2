@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import { InteractionProvider } from './context/InteractionContext';
+import { ThemeProvider } from './context/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import RoleBasedRedirect from './components/RoleBasedRedirect';
 import Login from './pages/Login';
@@ -25,10 +26,11 @@ import DoctorPatients from './pages/DoctorPatients';
 
 function App() {
   return (
-    <AuthProvider>
-      <InteractionProvider>
-        <Router>
-          <div className="App">
+    <ThemeProvider>
+      <AuthProvider>
+        <InteractionProvider>
+          <Router>
+            <div className="App">
             <Toaster
             position="top-right"
             toastOptions={{
@@ -184,6 +186,7 @@ function App() {
       </Router>
       </InteractionProvider>
     </AuthProvider>
+    </ThemeProvider>
   );
 }
 

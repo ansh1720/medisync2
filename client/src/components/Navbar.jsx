@@ -1,128 +1,74 @@
 import { Link, useLocation } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { SunIcon, MoonIcon } from '@heroicons/react/24/outline';
 import NotificationCenter from './NotificationCenter';
+import ThemeToggle from './ThemeToggle';
 
 function Navbar() {
   const { user, logout, getRoleDashboard } = useAuth();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
-
-  // Load dark mode preference from localStorage
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
-    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-      setIsDarkMode(true);
-      document.documentElement.classList.add('dark');
-      document.body.style.backgroundColor = '#111827';
-      document.body.style.color = '#f9fafb';
-    } else {
-      setIsDarkMode(false);
-      document.documentElement.classList.remove('dark');
-      document.body.style.backgroundColor = '#f8fafc';
-      document.body.style.color = '#1e293b';
-    }
-  }, []);
-
-  // Toggle dark mode
-  const toggleDarkMode = () => {
-    const newMode = !isDarkMode;
-    setIsDarkMode(newMode);
-    
-    if (newMode) {
-      document.documentElement.classList.add('dark');
-      document.body.style.backgroundColor = '#111827';
-      document.body.style.color = '#f9fafb';
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      document.body.style.backgroundColor = '#f8fafc';
-      document.body.style.color = '#1e293b';
-      localStorage.setItem('theme', 'light');
-    }
-  };
 
   const getNavigationItems = () => {
     const baseNavigation = [
       { name: 'Dashboard', href: getRoleDashboard(user?.role || 'user') },
+      { name: 'Diseases', href: '/diseases' },
+      { name: 'Risk Assessment', href: '/risk-assessment' },
+      { name: 'Consultation', href: '/consultation' },
+      { name: 'Hospitals', href: '/hospitals' },
+      { name: 'Health News', href: '/news' },
     ];
 
-    // Role-specific navigation
+    // Add role-specific navigation items
     if (user?.role === 'admin') {
-      return [
-        ...baseNavigation,
-        { name: 'User Management', href: '/admin/users' },
-        { name: 'System Monitor', href: '/admin/monitor' },
-        { name: 'Reports', href: '/admin/reports' },
-      ];
+      baseNavigation.push({ name: 'Admin Panel', href: '/admin' });
     } else if (user?.role === 'doctor') {
-      return [
-        ...baseNavigation,
-        { name: 'My Patients', href: '/patients' },
-        { name: 'Appointments', href: '/consultations' },
-        { name: 'Medical Records', href: '/health-records' },
-        { name: 'Disease Search', href: '/diseases' },
-        { name: 'Community', href: '/forum' },
-      ];
-    } else {
-      return [
-        ...baseNavigation,
-        { name: 'Risk Assessment', href: '/risk-assessment' },
-        { name: 'Equipment Readings', href: '/equipment' },
-        { name: 'Disease Search', href: '/diseases' },
-        { name: 'Find Hospitals', href: '/hospitals' },
-        { name: 'Consultations', href: '/consultations' },
-        { name: 'Community', href: '/forum' },
-        { name: 'Health News', href: '/news' },
-      ];
+      baseNavigation.push({ name: 'My Patients', href: '/doctor/patients' });
     }
-  };
 
-  const navigation = getNavigationItems();
-
-  const isActive = (path) => {
-    return location.pathname === path;
+    return baseNavigation;
   };
 
   return (
-    <nav className="bg-white dark:bg-gray-900 shadow-lg border-b border-gray-200 dark:border-gray-700 transition-colors duration-200">
+    <nav className="bg-nav shadow-lg border-b border-border transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-20">
-          {/* Logo and Navigation */}
-          <div className="flex">
-            <div className="flex-shrink-0 flex items-center">
-              <Link to="/dashboard" className="flex items-center space-x-3 group">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow duration-300">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+          <div className="flex items-center">
+            {/* Logo */}
+            <Link to="/" className="flex-shrink-0 flex items-center group">
+              <div className="relative">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center transform group-hover:scale-105 transition-all duration-200 shadow-lg">
+                  <span className="text-white font-bold text-lg">M</span>
                 </div>
-                <div className="flex flex-col">
+              </div>
+              <div className="ml-3">
+                <div className="flex items-baseline space-x-1">
                   <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                    MediSync
+                    Medi
                   </span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400 -mt-1 hidden sm:block">
-                    Healthcare Platform
+                  <span className="text-2xl font-bold text-nav">
+                    Sync
                   </span>
                 </div>
-              </Link>
-            </div>
-            <div className="hidden lg:ml-12 lg:flex lg:space-x-1">
-              {navigation.map((item) => (
+                <span className="text-xs text-muted-foreground -mt-1 hidden sm:block">
+                  Healthcare Platform
+                </span>
+              </div>
+            </Link>
+          </div>
+
+          {/* Desktop navigation */}
+          <div className="hidden lg:flex items-center space-x-1">
+            <div className="flex space-x-1">
+              {getNavigationItems().map((item) => (
                 <Link
                   key={item.name}
                   to={item.href}
-                  className={`
-                    inline-flex items-center px-4 py-2 text-sm font-medium transition-all duration-200 rounded-lg
-                    ${isActive(item.href)
-                      ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 shadow-sm ring-2 ring-blue-500/20'
-                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
-                    }
-                  `}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                    location.pathname === item.href
+                      ? 'bg-primary text-primary-foreground shadow-sm ring-2 ring-primary/20'
+                      : 'text-muted-foreground hover:bg-nav-hover hover:text-nav'
+                  }`}
                 >
                   {item.name}
                 </Link>
@@ -134,7 +80,7 @@ function Navbar() {
           <div className="lg:hidden flex items-center">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="inline-flex items-center justify-center p-3 rounded-lg text-gray-400 dark:text-gray-300 hover:text-gray-500 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
+              className="inline-flex items-center justify-center p-3 rounded-lg text-gray-400 hover:text-gray-500 hover:bg-gray-100 transition-colors duration-200"
             >
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 {isMobileMenuOpen ? (
@@ -148,28 +94,16 @@ function Navbar() {
 
           {/* User menu */}
           <div className="hidden lg:flex items-center space-x-4">
+            <ThemeToggle size="md" />
             <NotificationCenter />
-            
-            {/* Dark mode toggle */}
-            <button
-              onClick={toggleDarkMode}
-              className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
-              title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-            >
-              {isDarkMode ? (
-                <SunIcon className="h-5 w-5" />
-              ) : (
-                <MoonIcon className="h-5 w-5" />
-              )}
-            </button>
             
             <div className="flex items-center space-x-3">
               <div className="text-right">
-                <div className="text-sm font-medium text-gray-900 dark:text-white">
+                <div className="text-sm font-medium text-nav">
                   {user?.name}
                 </div>
                 {user?.role && user.role !== 'user' && (
-                  <div className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+                  <div className="text-xs text-muted-foreground capitalize">
                     {user.role}
                   </div>
                 )}
@@ -177,13 +111,13 @@ function Navbar() {
               <div className="flex items-center space-x-2">
                 <Link
                   to="/profile"
-                  className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
+                  className="inline-flex items-center px-3 py-2 border border-border rounded-lg text-sm font-medium text-muted-foreground bg-card hover:bg-accent transition-colors duration-200"
                 >
                   Profile
                 </Link>
                 <button
                   onClick={logout}
-                  className="inline-flex items-center px-3 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors duration-200"
+                  className="inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium text-white bg-error hover:bg-red-700 transition-colors duration-200"
                 >
                   Logout
                 </button>
@@ -195,65 +129,48 @@ function Navbar() {
 
       {/* Mobile menu */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden border-t border-gray-200 dark:border-gray-700">
-          <div className="px-2 pt-2 pb-3 space-y-1 bg-white dark:bg-gray-900">
-            {navigation.map((item) => (
+        <div className="lg:hidden border-t border-border">
+          <div className="px-2 pt-2 pb-3 space-y-1 bg-nav">
+            {getNavigationItems().map((item) => (
               <Link
                 key={item.name}
                 to={item.href}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`
-                  block px-3 py-3 rounded-lg text-base font-medium transition-colors duration-200
-                  ${isActive(item.href)
-                    ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
-                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
-                  }
-                `}
+                className={`block px-3 py-2 rounded-lg text-base font-medium transition-colors duration-200 ${
+                  location.pathname === item.href
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-nav-hover hover:text-nav'
+                }`}
               >
                 {item.name}
               </Link>
             ))}
           </div>
           
-          {/* Mobile user section */}
-          <div className="pt-4 pb-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-            <div className="flex items-center px-4 mb-3">
-              <div className="flex-1">
-                <div className="text-base font-medium text-gray-800 dark:text-white">
+          <div className="pt-4 pb-3 border-t border-border bg-muted">
+            <div className="flex items-center justify-between px-5">
+              <div className="flex-shrink-0">
+                <div className="text-base font-medium text-foreground">
                   {user?.name}
                 </div>
                 {user?.role && user.role !== 'user' && (
-                  <div className="text-sm text-gray-500 dark:text-gray-400 capitalize">
+                  <div className="text-sm text-muted-foreground capitalize">
                     {user.role}
                   </div>
                 )}
               </div>
-              
-              {/* Mobile dark mode toggle */}
-              <button
-                onClick={toggleDarkMode}
-                className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
-                title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-              >
-                {isDarkMode ? (
-                  <SunIcon className="h-5 w-5" />
-                ) : (
-                  <MoonIcon className="h-5 w-5" />
-                )}
-              </button>
+              <ThemeToggle size="sm" />
             </div>
-            
-            <div className="px-4 space-y-2">
+            <div className="mt-3 px-2 space-y-1">
               <Link
                 to="/profile"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="block w-full text-left px-3 py-2 rounded-lg text-base font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200"
+                className="block w-full text-left px-3 py-2 rounded-lg text-base font-medium text-muted-foreground bg-card border border-border hover:bg-accent transition-colors duration-200"
               >
                 Profile
               </Link>
               <button
                 onClick={logout}
-                className="block w-full text-left px-3 py-2 rounded-lg text-base font-medium text-white bg-red-600 hover:bg-red-700 transition-colors duration-200"
+                className="block w-full text-left px-3 py-2 rounded-lg text-base font-medium text-white bg-error hover:bg-red-700 transition-colors duration-200"
               >
                 Logout
               </button>
