@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
-import { consultationAPI } from '../utils/api';
+import { consultationAPI, verificationAPI } from '../utils/api';
 import { 
   CalendarDaysIcon, 
   UserGroupIcon, 
@@ -14,7 +14,10 @@ import {
   ExclamationTriangleIcon,
   StarIcon,
   PhoneIcon,
-  VideoCameraIcon
+  VideoCameraIcon,
+  ShieldCheckIcon,
+  XCircleIcon,
+  DocumentCheckIcon
 } from '@heroicons/react/24/outline';
 import Navbar from '../components/Navbar';
 import toast from 'react-hot-toast';
@@ -34,6 +37,8 @@ function DoctorDashboard() {
   const [recentPatients, setRecentPatients] = useState([]);
   const [consultationRequests, setConsultationRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [verificationStatus, setVerificationStatus] = useState(null);
+  const [verifiedDoctors, setVerifiedDoctors] = useState([]);
   const hasLoadedData = useRef(false);
 
   useEffect(() => {
@@ -41,8 +46,39 @@ function DoctorDashboard() {
     if (!hasLoadedData.current) {
       hasLoadedData.current = true;
       loadDoctorData();
+      loadVerificationData();
     }
   }, []);
+
+  const loadVerificationData = async () => {
+    try {
+      console.log('Loading verification status...');
+      // Load verification status
+      const statusResponse = await verificationAPI.getVerificationStatus();
+      console.log('Verification status response:', statusResponse);
+      if (statusResponse.data.success) {
+        console.log('Verification status data:', statusResponse.data.data);
+        setVerificationStatus(statusResponse.data.data);
+      }
+    } catch (error) {
+      console.error('Error loading verification data:', error);
+      // Set default status if API fails - assume not submitted
+      setVerificationStatus({
+        verificationStatus: 'not_submitted',
+        isVerified: false
+      });
+    }
+
+    try {
+      // Load verified doctors list
+      const doctorsResponse = await verificationAPI.getVerifiedDoctors({ limit: 10 });
+      if (doctorsResponse.data.success) {
+        setVerifiedDoctors(doctorsResponse.data.data.doctors);
+      }
+    } catch (error) {
+      console.error('Error loading verified doctors:', error);
+    }
+  };
 
   const loadDoctorData = async () => {
     try {
@@ -101,7 +137,7 @@ function DoctorDashboard() {
         setAppointments([
           {
             id: 1,
-            patientName: 'Sarah Johnson',
+            patientName: 'Ananya Singh',
             patientAge: 32,
             time: '09:00 AM',
             type: 'video',
@@ -111,7 +147,7 @@ function DoctorDashboard() {
           },
           {
             id: 2,
-            patientName: 'Michael Chen',
+            patientName: 'Arjun Iyer',
             patientAge: 45,
             time: '10:30 AM',
             type: 'in-person',
@@ -121,7 +157,7 @@ function DoctorDashboard() {
           },
           {
             id: 3,
-            patientName: 'Emily Rodriguez',
+            patientName: 'Meera Nair',
             patientAge: 28,
             time: '02:00 PM',
             type: 'phone',
@@ -131,7 +167,7 @@ function DoctorDashboard() {
           },
           {
             id: 4,
-            patientName: 'David Wilson',
+            patientName: 'Vikram Malhotra',
             patientAge: 38,
             time: '03:30 PM',
             type: 'video',
@@ -142,57 +178,115 @@ function DoctorDashboard() {
         ]);
       }
 
-      // Mock recent patients and consultation requests for now
-      setRecentPatients([
-        {
-          id: 1,
-          name: 'Alice Thompson',
-          age: 29,
-          condition: 'Migraine',
-          lastVisit: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-          nextAppointment: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          status: 'stable'
-        },
-        {
-          id: 2,
-          name: 'Robert Brown',
-          age: 52,
-          condition: 'Diabetes Type 2',
-          lastVisit: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-          nextAppointment: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
-          status: 'monitoring'
-        },
-        {
-          id: 3,
-          name: 'Lisa Garcia',
-          age: 41,
-          condition: 'Hypertension',
-          lastVisit: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-          nextAppointment: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-          status: 'improving'
+      // Load recent patients from API
+      try {
+        const patientsResponse = await consultationAPI.getDoctorPatients();
+        if (patientsResponse.data.success) {
+          const patients = patientsResponse.data.data.patients || [];
+          // Take only the 3 most recent patients
+          const recentPatients = patients
+            .sort((a, b) => new Date(b.lastVisit) - new Date(a.lastVisit))
+            .slice(0, 3)
+            .map(p => ({
+              id: p.id,
+              name: p.name,
+              age: p.age,
+              condition: p.condition,
+              lastVisit: new Date(p.lastVisit),
+              nextAppointment: p.nextAppointment ? new Date(p.nextAppointment) : null,
+              status: p.status
+            }));
+          
+          setRecentPatients(recentPatients);
         }
-      ]);
+      } catch (error) {
+        console.error('Error loading recent patients:', error);
+        // Set empty array if API fails
+        setRecentPatients([]);
+      }
 
-      setConsultationRequests([
-        {
-          id: 1,
-          patientName: 'James Miller',
-          age: 35,
-          requestedTime: new Date(Date.now() + 2 * 60 * 60 * 1000),
-          urgency: 'medium',
-          symptoms: 'Chest pain, shortness of breath',
-          requestedAt: new Date(Date.now() - 30 * 60 * 1000)
-        },
-        {
-          id: 2,
-          patientName: 'Maria Lopez',
-          age: 28,
-          requestedTime: new Date(Date.now() + 4 * 60 * 60 * 1000),
-          urgency: 'low',
-          symptoms: 'Skin rash, itching',
-          requestedAt: new Date(Date.now() - 45 * 60 * 1000)
+      // Load consultation requests from API (scheduled consultations)
+      try {
+        const scheduleResponse = await consultationAPI.getDoctorSchedule({ 
+          status: 'scheduled',
+          view: 'week'
+        });
+        
+        if (scheduleResponse.data.success) {
+          // Convert scheduled consultations to consultation requests format
+          const allConsultations = Object.values(scheduleResponse.data.data.schedule).flat();
+          
+          // Filter for upcoming consultations that need action
+          const requests = allConsultations
+            .filter(c => c.status === 'scheduled' && new Date(c.scheduledDateTime) > new Date())
+            .map(c => ({
+              id: c._id,
+              patientName: c.patientId?.name || 'Unknown Patient',
+              age: c.patientId?.age || 'N/A',
+              requestedTime: new Date(c.scheduledDateTime),
+              urgency: c.urgency || 'medium',
+              symptoms: c.symptoms || c.chiefComplaint || 'No symptoms provided',
+              requestedAt: new Date(c.createdAt || c.scheduledDateTime)
+            }));
+          
+          setConsultationRequests(requests);
+          
+          // Set appointments from confirmed consultations
+          const confirmedAppointments = allConsultations
+            .filter(c => c.status === 'scheduled')
+            .map(c => ({
+              id: c._id,
+              patientName: c.patientId?.name || 'Unknown Patient',
+              patientAge: c.patientId?.age || 'N/A',
+              time: new Date(c.scheduledDateTime).toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+              }),
+              type: c.consultationType || 'video',
+              condition: c.symptoms || c.chiefComplaint || 'Consultation',
+              status: 'confirmed',
+              duration: c.duration || 30
+            }));
+          
+          setAppointments(confirmedAppointments);
         }
-      ]);
+      } catch (error) {
+        console.error('Error loading consultations from API:', error);
+        // Fall back to mock data if API fails
+        const savedRequests = JSON.parse(localStorage.getItem('consultationRequests') || '[]');
+        
+        const processedRequests = savedRequests.map(req => ({
+          ...req,
+          requestedTime: new Date(req.requestedTime),
+          requestedAt: new Date(req.requestedAt)
+        }));
+        
+        if (processedRequests.length === 0) {
+          const mockRequests = [
+            {
+              id: 1,
+              patientName: 'Rohan Desai',
+              age: 35,
+              requestedTime: new Date(Date.now() + 2 * 60 * 60 * 1000),
+              urgency: 'medium',
+              symptoms: 'Chest pain, shortness of breath',
+              requestedAt: new Date(Date.now() - 30 * 60 * 1000)
+            },
+            {
+              id: 2,
+              patientName: 'Aisha Khan',
+              age: 28,
+              requestedTime: new Date(Date.now() + 4 * 60 * 60 * 1000),
+              urgency: 'low',
+              symptoms: 'Skin rash, itching',
+              requestedAt: new Date(Date.now() - 45 * 60 * 1000)
+            }
+          ];
+          setConsultationRequests(mockRequests);
+        } else {
+          setConsultationRequests(processedRequests);
+        }
+      }
 
       setIsLoading(false);
     } catch (error) {
@@ -223,15 +317,51 @@ function DoctorDashboard() {
         };
         setAppointments(prev => [...prev, newAppointment]);
         
+        // Add to patients list (persist in localStorage)
+        const newPatient = {
+          id: Date.now(),
+          name: acceptedRequest.patientName,
+          age: acceptedRequest.age,
+          gender: 'N/A',
+          phone: 'N/A',
+          email: 'N/A',
+          condition: acceptedRequest.symptoms,
+          lastVisit: new Date(),
+          nextAppointment: acceptedRequest.requestedTime,
+          status: 'new',
+          bloodGroup: 'N/A',
+          emergencyContact: 'N/A'
+        };
+        
+        // Get existing patients from localStorage
+        const existingPatients = JSON.parse(localStorage.getItem('doctorPatients') || '[]');
+        
+        // Check if patient already exists
+        const patientExists = existingPatients.some(p => p.name === acceptedRequest.patientName);
+        
+        if (!patientExists) {
+          // Add new patient
+          const updatedPatients = [...existingPatients, newPatient];
+          localStorage.setItem('doctorPatients', JSON.stringify(updatedPatients));
+          
+          // Update recent patients in current view
+          setRecentPatients(prev => [newPatient, ...prev].slice(0, 3));
+        }
+        
         // Update stats
         setStats(prev => ({
           ...prev,
-          todayAppointments: prev.todayAppointments + 1
+          todayAppointments: prev.todayAppointments + 1,
+          totalPatients: patientExists ? prev.totalPatients : prev.totalPatients + 1
         }));
       }
       
-      setConsultationRequests(prev => prev.filter(req => req.id !== requestId));
-      toast.success('Consultation request accepted');
+      // Remove from consultation requests and update localStorage
+      const updatedRequests = consultationRequests.filter(req => req.id !== requestId);
+      setConsultationRequests(updatedRequests);
+      localStorage.setItem('consultationRequests', JSON.stringify(updatedRequests));
+      
+      toast.success('Consultation request accepted and patient added to your list');
     } catch (error) {
       console.error('Error accepting consultation:', error);
       toast.error('Failed to accept consultation request');
@@ -243,7 +373,11 @@ function DoctorDashboard() {
       // Mock API call  
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      setConsultationRequests(prev => prev.filter(req => req.id !== requestId));
+      // Remove from consultation requests and update localStorage
+      const updatedRequests = consultationRequests.filter(req => req.id !== requestId);
+      setConsultationRequests(updatedRequests);
+      localStorage.setItem('consultationRequests', JSON.stringify(updatedRequests));
+      
       toast.success('Consultation request declined');
     } catch (error) {
       console.error('Error declining consultation:', error);
@@ -301,7 +435,10 @@ function DoctorDashboard() {
   };
 
   const formatDate = (date) => {
-    return date.toLocaleDateString('en-US', { 
+    if (!date) return 'N/A';
+    const dateObj = date instanceof Date ? date : new Date(date);
+    if (isNaN(dateObj.getTime())) return 'N/A';
+    return dateObj.toLocaleDateString('en-US', { 
       month: 'short', 
       day: 'numeric' 
     });
@@ -350,6 +487,105 @@ function DoctorDashboard() {
       <Navbar />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Verification Status Banner */}
+        {verificationStatus && verificationStatus.verificationStatus !== 'approved' && (
+          <div className="mb-6">
+            {verificationStatus.verificationStatus === 'not_submitted' && (
+              <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg">
+                <div className="flex items-start">
+                  <ExclamationTriangleIcon className="h-6 w-6 text-yellow-400 mt-0.5" />
+                  <div className="ml-3 flex-1">
+                    <h3 className="text-sm font-medium text-yellow-800">
+                      Verification Required
+                    </h3>
+                    <div className="mt-2 text-sm text-yellow-700">
+                      <p>
+                        To start accepting consultations and become visible to patients, you need to verify your profile
+                        by providing your medical credentials and qualifications.
+                      </p>
+                    </div>
+                    <div className="mt-4">
+                      <button
+                        onClick={() => navigate('/doctor/verification')}
+                        className="btn btn-primary"
+                      >
+                        <DocumentCheckIcon className="h-5 w-5 mr-2" />
+                        Get Verified Now
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {verificationStatus.verificationStatus === 'pending' && (
+              <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg">
+                <div className="flex items-start">
+                  <ClockIcon className="h-6 w-6 text-blue-400 mt-0.5" />
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-blue-800">
+                      Verification Pending
+                    </h3>
+                    <div className="mt-2 text-sm text-blue-700">
+                      <p>
+                        Your verification request is being reviewed by our admin team. You'll be notified once it's approved.
+                      </p>
+                      <p className="mt-1 text-xs">
+                        Submitted on: {new Date(verificationStatus.verificationSubmittedAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {verificationStatus.verificationStatus === 'rejected' && (
+              <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-lg">
+                <div className="flex items-start">
+                  <XCircleIcon className="h-6 w-6 text-red-400 mt-0.5" />
+                  <div className="ml-3 flex-1">
+                    <h3 className="text-sm font-medium text-red-800">
+                      Verification Rejected
+                    </h3>
+                    <div className="mt-2 text-sm text-red-700">
+                      <p>
+                        Unfortunately, your verification request was not approved.
+                      </p>
+                      {verificationStatus.verificationRejectionReason && (
+                        <p className="mt-2 font-medium">
+                          Reason: {verificationStatus.verificationRejectionReason}
+                        </p>
+                      )}
+                    </div>
+                    <div className="mt-4">
+                      <button
+                        onClick={() => navigate('/doctor/verification')}
+                        className="btn btn-primary"
+                      >
+                        Resubmit Verification
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Verified Badge */}
+        {verificationStatus?.verificationStatus === 'approved' && (
+          <div className="mb-6 bg-green-50 border-l-4 border-green-400 p-4 rounded-lg">
+            <div className="flex items-center">
+              <ShieldCheckIcon className="h-6 w-6 text-green-400" />
+              <div className="ml-3">
+                <p className="text-sm font-medium text-green-800">
+                  ✓ Verified Doctor - Your profile is visible to patients
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
@@ -465,6 +701,67 @@ function DoctorDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Verified Doctors on Platform */}
+        {verifiedDoctors.length > 0 && (
+          <div className="mb-8 bg-white rounded-xl shadow-lg p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">Verified Doctors on MediSync</h2>
+                <p className="text-sm text-gray-600 mt-1">Connect with other verified healthcare professionals</p>
+              </div>
+              <ShieldCheckIcon className="h-8 w-8 text-green-500" />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {verifiedDoctors.slice(0, 6).map((doctor) => (
+                <div key={doctor._id} className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
+                  <div className="flex items-start space-x-3">
+                    <div className="flex-shrink-0">
+                      <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <span className="text-xl font-semibold text-blue-600">
+                          {doctor.name.charAt(0)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-2">
+                        <h3 className="text-sm font-semibold text-gray-900 truncate">
+                          Dr. {doctor.name}
+                        </h3>
+                        <ShieldCheckIcon className="h-4 w-4 text-green-500 flex-shrink-0" />
+                      </div>
+                      <p className="text-xs text-gray-600 capitalize mt-1">
+                        {doctor.specialty.replace('_', ' ')}
+                      </p>
+                      {doctor.experience > 0 && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          {doctor.experience} years experience
+                        </p>
+                      )}
+                      {doctor.rating?.average > 0 && (
+                        <div className="flex items-center mt-2">
+                          <StarIcon className="h-3 w-3 text-yellow-400" />
+                          <span className="text-xs text-gray-600 ml-1">
+                            {doctor.rating.average.toFixed(1)} ({doctor.rating.reviewCount} reviews)
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {verifiedDoctors.length > 6 && (
+              <div className="mt-4 text-center">
+                <p className="text-sm text-gray-600">
+                  + {verifiedDoctors.length - 6} more verified doctors on the platform
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Today's Schedule */}

@@ -2,7 +2,6 @@ import { Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import NotificationCenter from './NotificationCenter';
-import ThemeToggle from './ThemeToggle';
 
 function Navbar() {
   const { user, logout, getRoleDashboard } = useAuth();
@@ -20,9 +19,8 @@ function Navbar() {
     ];
 
     // Add role-specific navigation items
-    if (user?.role === 'admin') {
-      baseNavigation.push({ name: 'Admin Panel', href: '/admin' });
-    } else if (user?.role === 'doctor') {
+    // Note: Admins don't need a separate "Admin Panel" link because Dashboard already goes to /admin-dashboard
+    if (user?.role === 'doctor') {
       baseNavigation.push({ name: 'My Patients', href: '/doctor/patients' });
     }
 
@@ -94,7 +92,6 @@ function Navbar() {
 
           {/* User menu */}
           <div className="hidden lg:flex items-center space-x-4">
-            <ThemeToggle size="md" />
             <NotificationCenter />
             
             <div className="flex items-center space-x-3">
@@ -159,7 +156,6 @@ function Navbar() {
                   </div>
                 )}
               </div>
-              <ThemeToggle size="sm" />
             </div>
             <div className="mt-3 px-2 space-y-1">
               <Link

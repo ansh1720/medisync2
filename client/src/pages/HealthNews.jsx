@@ -134,10 +134,30 @@ function HealthNews() {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(article =>
         article.title.toLowerCase().includes(query) ||
-        article.summary.toLowerCase().includes(query) ||
-        article.tags.some(tag => tag.toLowerCase().includes(query)) ||
+        (article.summary || article.description || '').toLowerCase().includes(query) ||
+        (article.tags || []).some(tag => tag.toLowerCase().includes(query)) ||
         article.author.toLowerCase().includes(query)
       );
+    }
+    
+    // Sort by date - newest first
+    filtered.sort((a, b) => {
+      // Parse dates more robustly
+      const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+      const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+      
+      // If dates are invalid, put them at the end
+      if (isNaN(dateA) && isNaN(dateB)) return 0;
+      if (isNaN(dateA)) return 1;
+      if (isNaN(dateB)) return -1;
+      
+      return dateB - dateA; // Descending order (newest first)
+    });
+    
+    console.log('Filtered articles sorted:', filtered.length, 'articles');
+    if (filtered.length > 0) {
+      console.log('First article date:', filtered[0].publishedAt, 'Title:', filtered[0].title);
+      console.log('Last article date:', filtered[filtered.length - 1].publishedAt);
     }
     
     setFilteredArticles(filtered);
@@ -178,7 +198,7 @@ function HealthNews() {
     if (navigator.share) {
       navigator.share({
         title: article.title,
-        text: article.summary,
+        text: article.summary || article.description || '',
         url: article.url || window.location.href
       }).catch(console.error);
     } else {
@@ -244,7 +264,7 @@ function HealthNews() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            🏥 Health News Center
+             Health News Center
           </h1>
           <p className="text-xl text-gray-600 mb-2">
             Stay updated with the latest health and medical news
@@ -329,13 +349,14 @@ function HealthNews() {
         {!isLoading && filteredArticles.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             {filteredArticles.map((article, index) => {
-              const isBookmarked = bookmarkedArticles.has(article._id);
-              const isLiked = likedArticles.has(article._id);
+              const articleId = article._id || article.id;
+              const isBookmarked = bookmarkedArticles.has(articleId);
+              const isLiked = likedArticles.has(articleId);
               const isLastArticle = index === filteredArticles.length - 1;
 
               return (
                 <div
-                  key={article._id}
+                  key={articleId}
                   ref={isLastArticle ? lastArticleElementRef : null}
                   className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden"
                 >
@@ -368,12 +389,12 @@ function HealthNews() {
 
                     {/* Summary */}
                     <p className="text-gray-600 mb-4">
-                      {article.summary}
+                      {article.summary || article.description || 'No description available'}
                     </p>
 
                     {/* Tags */}
                     <div className="flex flex-wrap gap-2 mb-4">
-                      {article.tags.slice(0, 3).map((tag) => (
+                      {(article.tags || []).slice(0, 3).map((tag) => (
                         <span
                           key={tag}
                           className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
@@ -402,7 +423,7 @@ function HealthNews() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
                         <button
-                          onClick={() => toggleLike(article._id)}
+                          onClick={() => toggleLike(articleId)}
                           className={`flex items-center space-x-1 ${
                             isLiked ? 'text-red-600' : 'text-gray-400 hover:text-red-600'
                           }`}
@@ -416,7 +437,7 @@ function HealthNews() {
                         </button>
 
                         <button
-                          onClick={() => toggleBookmark(article._id)}
+                          onClick={() => toggleBookmark(articleId)}
                           className={`flex items-center space-x-1 ${
                             isBookmarked ? 'text-blue-600' : 'text-gray-400 hover:text-blue-600'
                           }`}

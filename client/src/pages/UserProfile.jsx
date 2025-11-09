@@ -15,7 +15,8 @@ import {
   CameraIcon,
   PencilIcon,
   CheckIcon,
-  XMarkIcon
+  XMarkIcon,
+  ArrowRightOnRectangleIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import Navbar from '../components/Navbar';
@@ -25,7 +26,7 @@ const GENDERS = ['male', 'female', 'other', 'prefer_not_to_say'];
 const ACTIVITY_LEVELS = ['sedentary', 'lightly_active', 'moderately_active', 'very_active', 'extremely_active'];
 
 function UserProfile() {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -917,10 +918,17 @@ function UserProfile() {
             <div className="mt-8 pt-8 border-t border-gray-200">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Account Actions</h3>
               <div className="space-y-4">
-                <button className="btn btn-secondary">
+                <button 
+                  onClick={logout}
+                  className="btn btn-primary w-full flex items-center justify-center space-x-2"
+                >
+                  <ArrowRightOnRectangleIcon className="h-5 w-5" />
+                  <span>Logout</span>
+                </button>
+                <button className="btn btn-secondary w-full">
                   Download My Data
                 </button>
-                <button className="btn btn-secondary text-red-600 border-red-300 hover:bg-red-50">
+                <button className="btn btn-secondary w-full text-red-600 border-red-300 hover:bg-red-50">
                   Delete Account
                 </button>
               </div>

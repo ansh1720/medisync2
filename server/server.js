@@ -76,6 +76,8 @@ app.use('/api/hospitals', require('./routes/hospitalRoutes'));
 app.use('/api/consultation', require('./routes/consultationRoutes'));
 app.use('/api/forum', require('./routes/forumRoutes'));
 app.use('/api/news', require('./routes/newsRoutes'));
+app.use('/api/verification', require('./routes/verificationRoutes'));
+app.use('/api/admin', require('./routes/adminRoutes'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

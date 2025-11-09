@@ -33,8 +33,13 @@ exports.getAvailableDoctors = async (req, res) => {
       limit = 20
     } = req.query;
 
-    // Build filter query
-    const filter = { isActive: true };
+    // Build filter query - show doctors who are either active OR verified
+    const filter = {
+      $or: [
+        { isActive: true },
+        { verificationStatus: 'approved', isVerified: true }
+      ]
+    };
     
     if (specialty && specialty !== 'all') {
       filter.specialty = specialty;
@@ -54,7 +59,7 @@ exports.getAvailableDoctors = async (req, res) => {
 
     // Execute query with pagination
     const skip = (page - 1) * limit;
-    console.log('Final filter before query:', filter);
+    console.log('Final filter before query:', JSON.stringify(filter, null, 2));
     console.log('Skip:', skip, 'Limit:', limit);
     
     const [doctors, total] = await Promise.all([
@@ -66,7 +71,7 @@ exports.getAvailableDoctors = async (req, res) => {
       Doctor.countDocuments(filter)
     ]);
     
-
+    console.log(`Found ${doctors.length} doctors matching filter`);
 
     // Enhance doctor data with availability status
     const enhancedDoctors = doctors.map(doctor => ({
@@ -111,8 +116,13 @@ exports.getAvailableDoctors = async (req, res) => {
  */
 exports.bookConsultation = async (req, res) => {
   try {
+    console.log('=== Book Consultation Request ===');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    console.log('User ID:', req.user?.userId);
+    
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('Validation errors:', errors.array());
       return res.status(400).json({
         success: false,
         message: 'Invalid booking data',
@@ -132,38 +142,33 @@ exports.bookConsultation = async (req, res) => {
       insuranceInfo
     } = req.body;
 
+    console.log('Extracted data:', { doctorId, preferredDateTime, consultationType, symptoms, urgency });
+
     // Verify doctor exists and is available
-    const doctor = await Doctor.findById(doctorId).populate('userId', 'name');
+    const doctor = await Doctor.findById(doctorId);
     if (!doctor) {
+      console.log('Doctor not found:', doctorId);
       return res.status(404).json({
         success: false,
         message: 'Doctor not found'
       });
     }
 
-    // Check if the requested time slot is available
-    const requestedDate = new Date(preferredDateTime);
-    const isAvailable = await doctor.isTimeSlotAvailable(requestedDate, consultationType === 'in_person' ? 60 : 30);
-    
-    if (!isAvailable) {
-      return res.status(400).json({
-        success: false,
-        message: 'Selected time slot is not available',
-        suggestedTimes: await doctor.getNextAvailableSlots(5)
-      });
-    }
+    console.log('Doctor found:', doctor.name);
 
     // Check for existing consultations in the same time slot
+    const requestedDate = new Date(preferredDateTime);
     const existingConsultation = await Consultation.findOne({
       doctorId,
       scheduledDateTime: {
-        $gte: new Date(requestedDate.getTime() - 15 * 60000), // 15 min before
-        $lte: new Date(requestedDate.getTime() + 15 * 60000)  // 15 min after
+        $gte: new Date(requestedDate.getTime() - 30 * 60000), // 30 min before
+        $lte: new Date(requestedDate.getTime() + 30 * 60000)  // 30 min after
       },
       status: { $in: ['scheduled', 'ongoing'] }
     });
 
     if (existingConsultation) {
+      console.log('Time slot conflict found');
       return res.status(400).json({
         success: false,
         message: 'Time slot conflicts with existing consultation'
@@ -187,52 +192,70 @@ exports.bookConsultation = async (req, res) => {
     
     const totalFee = Math.round(baseFee * urgencyMultiplier[urgency] * typeMultiplier[consultationType]);
 
-    // Create consultation
+    console.log('Creating consultation for user:', req.user.userId);
+
+    // Map frontend consultationType to backend enum values
+    const consultationTypeMap = {
+      'video': 'video_call',
+      'audio': 'phone_call',
+      'chat': 'chat',
+      'in_person': 'in_person'
+    };
+
+    // Create consultation with correct schema fields
     const consultation = new Consultation({
-      patientId: req.user.id,
+      userId: req.user.userId,
       doctorId,
-      scheduledDateTime: requestedDate,
-      consultationType,
-      urgency,
-      symptoms,
-      medicalHistory,
-      currentMedications: currentMedications || [],
-      allergies: allergies || [],
-      insuranceInfo,
-      fee: {
-        amount: totalFee,
-        currency: 'USD',
-        breakdown: {
-          baseFee,
-          urgencyMultiplier: urgencyMultiplier[urgency],
-          typeMultiplier: typeMultiplier[consultationType]
-        }
+      scheduledAt: requestedDate,
+      consultationType: consultationTypeMap[consultationType] || 'video_call',
+      priority: urgency,
+      symptoms: symptoms ? [symptoms] : ['General consultation'], // Convert string to array
+      chiefComplaint: symptoms || 'General consultation',
+      additionalNotes: medicalHistory || '',
+      medicalHistory: {
+        allergies: allergies || [],
+        currentMedications: currentMedications || [],
+        previousSurgeries: [],
+        chronicConditions: [],
+        familyHistory: []
       },
-      status: 'scheduled'
+      status: 'requested',
+      estimatedDuration: consultationType === 'in_person' ? 60 : 30
     });
 
+    console.log('Saving consultation...');
     await consultation.save();
+    console.log('Consultation saved with ID:', consultation._id);
 
     // Populate for response
     await consultation.populate([
-      { path: 'patientId', select: 'name email phone' },
-      { path: 'doctorId', populate: { path: 'userId', select: 'name email' } }
+      { path: 'userId', select: 'name email phone' },
+      { path: 'doctorId', select: 'name email specialty' }
     ]);
 
-    // Send real-time notification to doctor
-    if (io) {
-      getIO().to(`doctor_${doctorId}`).emit('new_consultation', {
-        consultationId: consultation._id,
-        patient: consultation.patientId.name,
-        dateTime: requestedDate,
-        type: consultationType,
-        urgency
-      });
+    console.log('Consultation populated');
+
+    // Send real-time notification to doctor (if socket.io is available)
+    try {
+      const io = getIO();
+      if (io) {
+        io.to(`doctor_${doctorId}`).emit('new_consultation', {
+          consultationId: consultation._id,
+          patient: consultation.userId.name,
+          dateTime: requestedDate,
+          type: consultation.consultationType,
+          urgency: consultation.priority
+        });
+        console.log('Socket notification sent to doctor');
+      }
+    } catch (socketError) {
+      console.log('Socket notification failed (non-critical):', socketError.message);
     }
 
     // Send confirmation email (would integrate with email service)
     // await sendConsultationConfirmationEmail(consultation);
 
+    console.log('Booking successful, sending response');
     res.status(201).json({
       success: true,
       data: consultation,
@@ -1617,5 +1640,73 @@ async function processPaymentWithProvider(method, amount, currency, details) {
 function generateMeetingPassword() {
   return Math.random().toString(36).substr(2, 9).toUpperCase();
 }
+
+/**
+ * Get doctor's patients (users who have had consultations)
+ */
+exports.getDoctorPatients = async (req, res) => {
+  try {
+    // Get doctor profile
+    const doctor = await Doctor.findOne({ userRef: req.user.userId });
+    if (!doctor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Doctor profile not found'
+      });
+    }
+
+    // Get all consultations for this doctor
+    const consultations = await Consultation.find({ doctorId: doctor._id })
+      .populate('userId', 'name email phone age gender')
+      .sort({ createdAt: -1 });
+
+    // Create a map of unique patients with their latest consultation info
+    const patientsMap = new Map();
+    
+    consultations.forEach(consultation => {
+      const patientId = consultation.userId?._id.toString();
+      if (!patientId) return;
+      
+      if (!patientsMap.has(patientId)) {
+        const patient = consultation.userId;
+        patientsMap.set(patientId, {
+          id: patient._id,
+          name: patient.name,
+          email: patient.email,
+          phone: patient.phone || 'N/A',
+          age: patient.age || 'N/A',
+          gender: patient.gender || 'N/A',
+          condition: consultation.chiefComplaint || consultation.symptoms?.[0] || 'N/A',
+          lastVisit: consultation.updatedAt || consultation.createdAt,
+          status: consultation.status === 'completed' ? 'stable' : 'monitoring',
+          consultationCount: 1,
+          bloodGroup: 'N/A', // Can be added to User model if needed
+          emergencyContact: 'N/A' // Can be added to User model if needed
+        });
+      } else {
+        // Update consultation count
+        const existing = patientsMap.get(patientId);
+        existing.consultationCount += 1;
+      }
+    });
+
+    const patients = Array.from(patientsMap.values());
+
+    res.json({
+      success: true,
+      data: {
+        patients,
+        total: patients.length
+      }
+    });
+
+  } catch (error) {
+    console.error('Get doctor patients error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error retrieving patients'
+    });
+  }
+};
 
 module.exports = exports;

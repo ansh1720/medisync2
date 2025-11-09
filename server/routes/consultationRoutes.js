@@ -342,6 +342,17 @@ router.get('/doctor/schedule',
 );
 
 /**
+ * @route   GET /api/consultation/doctor/patients
+ * @desc    Get doctor's patients list (doctor only)
+ * @access  Private (Doctor)
+ */
+router.get('/doctor/patients',
+  verifyToken,
+  requireRole('doctor'),
+  consultationController.getDoctorPatients
+);
+
+/**
  * @route   POST /api/consultation/:id/add-notes
  * @desc    Add consultation notes (doctor only)
  * @access  Private (Doctor)

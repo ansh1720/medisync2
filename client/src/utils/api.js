@@ -56,6 +56,17 @@ export const riskAPI = {
   getRiskHistory: () => api.get('/risk/history'),
 };
 
+// Disease API
+export const diseaseAPI = {
+  getDiseases: (params) => api.get('/diseases', { params }),
+  searchDiseases: (params) => api.get('/diseases/search', { params }),
+  getDiseaseById: (id) => api.get(`/diseases/${id}`),
+  getDiseaseByName: (name) => api.get(`/diseases/details/${name}`),
+  createDisease: (data) => api.post('/diseases', data),
+  updateDisease: (id, data) => api.put(`/diseases/${id}`, data),
+  deleteDisease: (id) => api.delete(`/diseases/${id}`),
+};
+
 // Hospital API
 export const hospitalAPI = {
   getAllHospitals: () => api.get('/hospitals'),
@@ -76,6 +87,7 @@ export const consultationAPI = {
   
   // Doctor-specific endpoints
   getDoctorSchedule: (params) => api.get('/consultation/doctor/schedule', { params }),
+  getDoctorPatients: () => api.get('/consultation/doctor/patients'),
   getUpcomingConsultations: (params) => api.get('/consultation/upcoming', { params }),
   getConsultationStats: (params) => api.get('/consultation/stats/overview', { params }),
   completeConsultation: (id, data) => api.put(`/consultation/${id}/complete`, data),
@@ -103,6 +115,25 @@ export const forumAPI = {
 export const newsAPI = {
   getNews: (params) => api.get('/news', { params }),
   getAlerts: () => api.get('/news/alerts'),
+};
+
+// Verification API
+export const verificationAPI = {
+  submitVerification: (data) => api.post('/verification/submit', data),
+  getVerificationStatus: () => api.get('/verification/status'),
+  getPendingVerifications: (params) => api.get('/verification/pending', { params }),
+  getVerificationDetails: (doctorId) => api.get(`/verification/doctor/${doctorId}`),
+  approveVerification: (doctorId) => api.put(`/verification/approve/${doctorId}`),
+  rejectVerification: (doctorId, reason) => api.put(`/verification/reject/${doctorId}`, { reason }),
+  getVerifiedDoctors: (params) => api.get('/verification/verified-doctors', { params }),
+};
+
+// Admin API
+export const adminAPI = {
+  getUsers: (params) => api.get('/admin/users', { params }),
+  toggleUserStatus: (userId, isActive) => api.put(`/admin/users/${userId}/status`, { isActive }),
+  deleteUser: (userId) => api.delete(`/admin/users/${userId}`),
+  getStats: () => api.get('/admin/stats'),
 };
 
 export default api;

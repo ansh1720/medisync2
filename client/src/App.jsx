@@ -2,7 +2,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import { InteractionProvider } from './context/InteractionContext';
-import { ThemeProvider } from './context/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import RoleBasedRedirect from './components/RoleBasedRedirect';
 import Login from './pages/Login';
@@ -23,14 +22,15 @@ import EnhancedDiseaseDetails from './pages/EnhancedDiseaseDetails';
 import HealthRecords from './pages/HealthRecords';
 import Prescriptions from './pages/Prescriptions';
 import DoctorPatients from './pages/DoctorPatients';
+import DoctorVerification from './pages/DoctorVerification';
+import AdminVerifications from './pages/AdminVerifications';
 
 function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <InteractionProvider>
-          <Router>
-            <div className="App">
+    <AuthProvider>
+      <InteractionProvider>
+        <Router>
+          <div className="App">
             <Toaster
             position="top-right"
             toastOptions={{
@@ -68,6 +68,14 @@ function App() {
               }
             />
             <Route
+              path="/admin/verifications"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminVerifications />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/doctor-dashboard"
               element={
                 <ProtectedRoute allowedRoles={['doctor']}>
@@ -76,10 +84,18 @@ function App() {
               }
             />
             <Route
-              path="/patients"
+              path="/doctor/patients"
               element={
                 <ProtectedRoute allowedRoles={['doctor']}>
                   <DoctorPatients />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/doctor/verification"
+              element={
+                <ProtectedRoute allowedRoles={['doctor']}>
+                  <DoctorVerification />
                 </ProtectedRoute>
               }
             />
@@ -186,7 +202,6 @@ function App() {
       </Router>
       </InteractionProvider>
     </AuthProvider>
-    </ThemeProvider>
   );
 }
 

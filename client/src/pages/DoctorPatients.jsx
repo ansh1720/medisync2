@@ -12,6 +12,7 @@ import {
 } from '@heroicons/react/24/outline';
 import Navbar from '../components/Navbar';
 import toast from 'react-hot-toast';
+import { consultationAPI } from '../utils/api';
 
 function DoctorPatients() {
   const navigate = useNavigate();
@@ -28,87 +29,107 @@ function DoctorPatients() {
     try {
       setIsLoading(true);
       
-      // Mock patient data - in real app, this would come from API
-      const mockPatients = [
-        {
-          id: 1,
-          name: 'Alice Thompson',
-          age: 29,
-          gender: 'Female',
-          phone: '+1 (555) 123-4567',
-          email: 'alice.thompson@email.com',
-          condition: 'Migraine',
-          lastVisit: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-          nextAppointment: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          status: 'stable',
-          bloodGroup: 'O+',
-          emergencyContact: '+1 (555) 987-6543'
-        },
-        {
-          id: 2,
-          name: 'Robert Brown',
-          age: 52,
-          gender: 'Male',
-          phone: '+1 (555) 234-5678',
-          email: 'robert.brown@email.com',
-          condition: 'Diabetes Type 2',
-          lastVisit: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-          nextAppointment: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
-          status: 'monitoring',
-          bloodGroup: 'A+',
-          emergencyContact: '+1 (555) 876-5432'
-        },
-        {
-          id: 3,
-          name: 'Lisa Garcia',
-          age: 41,
-          gender: 'Female',
-          phone: '+1 (555) 345-6789',
-          email: 'lisa.garcia@email.com',
-          condition: 'Hypertension',
-          lastVisit: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-          nextAppointment: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-          status: 'improving',
-          bloodGroup: 'B-',
-          emergencyContact: '+1 (555) 765-4321'
-        },
-        {
-          id: 4,
-          name: 'Michael Johnson',
-          age: 67,
-          gender: 'Male',
-          phone: '+1 (555) 456-7890',
-          email: 'michael.johnson@email.com',
-          condition: 'Arthritis',
-          lastVisit: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
-          nextAppointment: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
-          status: 'stable',
-          bloodGroup: 'AB+',
-          emergencyContact: '+1 (555) 654-3210'
-        },
-        {
-          id: 5,
-          name: 'Sarah Wilson',
-          age: 34,
-          gender: 'Female',
-          phone: '+1 (555) 567-8901',
-          email: 'sarah.wilson@email.com',
-          condition: 'Anxiety',
-          lastVisit: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-          nextAppointment: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          status: 'improving',
-          bloodGroup: 'O-',
-          emergencyContact: '+1 (555) 543-2109'
-        }
-      ];
-
-      setPatients(mockPatients);
-      setIsLoading(false);
+      // Load patients from API
+      const response = await consultationAPI.getDoctorPatients();
+      
+      if (response.data.success) {
+        const apiPatients = response.data.data.patients.map(patient => ({
+          ...patient,
+          lastVisit: new Date(patient.lastVisit),
+          nextAppointment: patient.nextAppointment ? new Date(patient.nextAppointment) : null
+        }));
+        
+        setPatients(apiPatients);
+        setIsLoading(false);
+        return;
+      }
+      
     } catch (error) {
-      console.error('Error loading patients:', error);
-      toast.error('Failed to load patients');
-      setIsLoading(false);
+      console.error('Error loading patients from API:', error);
+      toast.error('Failed to load patients from database, showing sample data');
     }
+    
+    // Fallback to mock data if API fails
+    const mockPatients = [
+      {
+        id: 1,
+        name: 'Priya Sharma',
+        age: 29,
+        gender: 'Female',
+        phone: '+91 98765 43210',
+        email: 'priya.sharma@email.com',
+        condition: 'Migraine',
+        lastVisit: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+        nextAppointment: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        status: 'stable',
+        bloodGroup: 'O+',
+        emergencyContact: '+91 98765 12345',
+        consultationCount: 1
+      },
+      {
+        id: 2,
+        name: 'Rajesh Kumar',
+        age: 52,
+        gender: 'Male',
+        phone: '+91 98234 56789',
+        email: 'rajesh.kumar@email.com',
+        condition: 'Diabetes Type 2',
+        lastVisit: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+        nextAppointment: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+        status: 'monitoring',
+        bloodGroup: 'A+',
+        emergencyContact: '+91 98876 54321',
+        consultationCount: 3
+      },
+      {
+        id: 3,
+        name: 'Kavita Patel',
+        age: 41,
+        gender: 'Female',
+        phone: '+91 97345 67890',
+        email: 'kavita.patel@email.com',
+        condition: 'Hypertension',
+        lastVisit: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+        nextAppointment: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        status: 'improving',
+        bloodGroup: 'B-',
+        emergencyContact: '+91 97765 43210',
+        consultationCount: 2
+      },
+      {
+        id: 4,
+        name: 'Amit Verma',
+        age: 67,
+        gender: 'Male',
+        phone: '+91 96456 78901',
+        email: 'amit.verma@email.com',
+        condition: 'Arthritis',
+        lastVisit: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+        nextAppointment: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
+        status: 'stable',
+        bloodGroup: 'AB+',
+        emergencyContact: '+91 96654 32109',
+        consultationCount: 5
+      },
+      {
+        id: 5,
+        name: 'Sneha Reddy',
+        age: 34,
+        gender: 'Female',
+        phone: '+91 95567 89012',
+        email: 'sneha.reddy@email.com',
+        condition: 'Anxiety',
+        lastVisit: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+        nextAppointment: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        status: 'improving',
+        bloodGroup: 'O-',
+        emergencyContact: '+91 95543 21098',
+        consultationCount: 1
+      }
+    ];
+
+    setPatients(mockPatients);
+    setIsLoading(false);
   };
 
   const filteredPatients = patients.filter(patient => {
@@ -160,7 +181,10 @@ function DoctorPatients() {
   };
 
   const formatDate = (date) => {
-    return date.toLocaleDateString('en-US', { 
+    if (!date) return 'N/A';
+    const dateObj = date instanceof Date ? date : new Date(date);
+    if (isNaN(dateObj.getTime())) return 'N/A';
+    return dateObj.toLocaleDateString('en-US', { 
       year: 'numeric', 
       month: 'short', 
       day: 'numeric' 

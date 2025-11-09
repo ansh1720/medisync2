@@ -26,9 +26,9 @@ const doctorSchema = new mongoose.Schema({
   },
   specialty: {
     type: String,
-    required: [true, 'Specialty is required'],
     enum: {
       values: [
+        'general', // Added default option
         'cardiology', 'neurology', 'oncology', 'pediatrics',
         'orthopedics', 'dermatology', 'psychiatry', 'radiology',
         'surgery', 'emergency', 'internal_medicine', 'obstetrics',
@@ -38,7 +38,8 @@ const doctorSchema = new mongoose.Schema({
         'rheumatology', 'hematology', 'nephrology', 'plastic_surgery'
       ],
       message: 'Invalid specialty'
-    }
+    },
+    default: 'general'
   },
   subSpecialties: {
     type: [String],
@@ -52,17 +53,14 @@ const doctorSchema = new mongoose.Schema({
   qualifications: {
     degree: {
       type: String,
-      required: [true, 'Medical degree is required'],
       trim: true
     },
     university: {
       type: String,
-      required: [true, 'University is required'],
       trim: true
     },
     graduationYear: {
       type: Number,
-      required: [true, 'Graduation year is required'],
       min: [1950, 'Graduation year must be after 1950'],
       max: [new Date().getFullYear(), 'Graduation year cannot be in the future']
     },
@@ -114,7 +112,6 @@ const doctorSchema = new mongoose.Schema({
   contact: {
     phone: {
       type: String,
-      required: [true, 'Phone number is required'],
       match: [
         /^[\+]?[1-9][\d]{0,15}$/,
         'Please enter a valid phone number'
@@ -151,8 +148,8 @@ const doctorSchema = new mongoose.Schema({
   rating: {
     average: {
       type: Number,
-      min: [1, 'Rating must be between 1 and 5'],
-      max: [5, 'Rating must be between 1 and 5'],
+      min: [0, 'Rating cannot be negative'],
+      max: [5, 'Rating must be between 0 and 5'],
       default: 0
     },
     reviewCount: {
@@ -195,6 +192,189 @@ const doctorSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  verificationStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected', 'not_submitted'],
+    default: 'not_submitted'
+  },
+  verificationSubmittedAt: {
+    type: Date
+  },
+  verificationApprovedAt: {
+    type: Date
+  },
+  verificationRejectedAt: {
+    type: Date
+  },
+  verificationRejectionReason: {
+    type: String
+  },
+  verificationApprovedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  medicalLicense: {
+    number: {
+      type: String,
+      trim: true
+    },
+    issuingAuthority: {
+      type: String,
+      trim: true
+    },
+    issuingCountry: {
+      type: String,
+      trim: true
+    },
+    issuingState: {
+      type: String,
+      trim: true
+    },
+    issueDate: {
+      type: Date
+    },
+    expiryDate: {
+      type: Date
+    },
+    documentUrl: String
+  },
+  medicalCouncilRegistration: {
+    registrationNumber: {
+      type: String,
+      trim: true
+    },
+    councilName: {
+      type: String,
+      trim: true
+    },
+    registrationDate: {
+      type: Date
+    },
+    documentUrl: String
+  },
+  education: [{
+    degree: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    institution: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    fieldOfStudy: {
+      type: String,
+      trim: true
+    },
+    startYear: {
+      type: Number,
+      min: 1950,
+      max: new Date().getFullYear()
+    },
+    endYear: {
+      type: Number,
+      min: 1950,
+      max: new Date().getFullYear() + 10
+    },
+    country: {
+      type: String,
+      trim: true
+    },
+    documentUrl: String
+  }],
+  professionalExperience: [{
+    position: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    institution: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    department: {
+      type: String,
+      trim: true
+    },
+    startDate: {
+      type: Date,
+      required: true
+    },
+    endDate: {
+      type: Date
+    },
+    isCurrent: {
+      type: Boolean,
+      default: false
+    },
+    description: {
+      type: String,
+      maxlength: 500
+    }
+  }],
+  specialtyCertifications: [{
+    certificationName: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    issuingOrganization: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    issueDate: {
+      type: Date,
+      required: true
+    },
+    expiryDate: {
+      type: Date
+    },
+    credentialId: {
+      type: String,
+      trim: true
+    },
+    documentUrl: String
+  }],
+  publications: [{
+    title: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    journal: {
+      type: String,
+      trim: true
+    },
+    publicationDate: {
+      type: Date
+    },
+    doi: {
+      type: String,
+      trim: true
+    },
+    url: String
+  }],
+  awards: [{
+    title: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    issuingOrganization: {
+      type: String,
+      trim: true
+    },
+    date: {
+      type: Date
+    },
+    description: {
+      type: String,
+      maxlength: 300
+    }
+  }],
   verificationDocuments: [{
     type: {
       type: String,

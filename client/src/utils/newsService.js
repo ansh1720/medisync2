@@ -4,7 +4,7 @@ const NEWS_API_SOURCES = {
   // Primary API - NewsAPI (requires API key)
   newsapi: {
     baseUrl: 'https://newsapi.org/v2',
-    key: import.meta.env.VITE_NEWS_API_KEY || null, // Only use if valid key is provided
+    key: import.meta.env.VITE_NEWS_API_KEY || null,
     endpoint: '/everything'
   },
   
@@ -20,25 +20,63 @@ const NEWS_API_SOURCES = {
     baseUrl: 'https://api.currentsapi.services/v1',
     key: import.meta.env.VITE_CURRENTS_API_KEY || null,
     endpoint: '/search'
+  },
+  
+  // WHO RSS Feeds - No key required
+  who: {
+    baseUrl: 'https://www.who.int',
+    feeds: {
+      news: '/feeds/entity/mediacentre/news/en/rss.xml',
+      outbreak: '/feeds/entity/csr/don/en/rss.xml',
+      emergencies: '/feeds/entity/emergencies/en/rss.xml'
+    }
+  },
+  
+  // CDC News API - No key required
+  cdc: {
+    baseUrl: 'https://tools.cdc.gov/api/v2/resources/media',
+    topics: ['coronavirus', 'flu', 'vaccination', 'outbreak', 'prevention']
+  },
+  
+  // PubMed API - Free, no key required
+  pubmed: {
+    baseUrl: 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils',
+    searchEndpoint: '/esearch.fcgi',
+    summaryEndpoint: '/esummary.fcgi'
   }
 };
 
-// Health-related keywords for better news filtering and diversity
+// Health-related keywords for better news filtering and diversity - HEALTH ONLY
 const HEALTH_KEYWORDS = [
+  // Core medical terms
   'health', 'medical', 'medicine', 'healthcare', 'hospital', 'doctor', 'disease',
   'treatment', 'therapy', 'clinical trial', 'vaccine', 'drug', 'pharmaceutical',
-  'wellness', 'fitness', 'nutrition', 'diet', 'mental health', 'covid', 'virus',
-  'bacteria', 'infection', 'diagnosis', 'prevention', 'symptoms', 'research',
-  'study', 'breakthrough', 'cure', 'cancer', 'diabetes', 'heart disease',
-  'alzheimer', 'depression', 'anxiety', 'obesity', 'surgery', 'medical device',
-  // WHO/CDC specific terms
+  'patient', 'diagnosis', 'symptoms', 'cure', 'surgery', 'medical device',
+  
+  // Diseases and conditions
+  'cancer', 'diabetes', 'heart disease', 'stroke', 'alzheimer', 'dementia',
+  'depression', 'anxiety', 'obesity', 'arthritis', 'asthma', 'tuberculosis',
+  'malaria', 'HIV', 'AIDS', 'hepatitis', 'pneumonia', 'influenza',
+  
+  // Public health emergencies
+  'outbreak', 'epidemic', 'pandemic', 'virus', 'bacteria', 'infection',
+  'contagious', 'infectious disease', 'pathogen', 'quarantine', 'isolation',
+  'health emergency', 'disease surveillance', 'contact tracing',
+  
+  // Health organizations
   'WHO', 'World Health Organization', 'CDC', 'Centers for Disease Control',
   'NIH', 'National Institutes of Health', 'FDA', 'Food and Drug Administration',
-  // Global health terms
-  'pandemic', 'epidemic', 'outbreak', 'public health', 'global health',
-  'health policy', 'telemedicine', 'digital health', 'AI healthcare', 'biotech',
-  // Specialized medical terms
-  'immunology', 'cardiology', 'oncology', 'neurology', 'psychiatry', 'pediatrics'
+  'health ministry', 'health department', 'medical association',
+  
+  // Medical research and innovation
+  'medical research', 'clinical study', 'drug trial', 'vaccine trial',
+  'breakthrough', 'medical breakthrough', 'gene therapy', 'immunotherapy',
+  'stem cell', 'biotech', 'biotechnology', 'precision medicine',
+  
+  // Healthcare systems and policy
+  'public health', 'global health', 'health policy', 'healthcare reform',
+  'health insurance', 'telemedicine', 'digital health', 'AI healthcare',
+  'medical AI', 'health data', 'electronic health records'
 ];
 
 // Diverse health news sources to avoid repetition
@@ -82,20 +120,22 @@ export const fetchHealthNews = async (options = {}) => {
     language = 'en'
   } = options;
 
-  // Check if we have valid API keys, if not, go straight to mock data
+  // Check if we have valid API keys
   const hasValidNewsAPIKey = NEWS_API_SOURCES.newsapi.key && NEWS_API_SOURCES.newsapi.key !== 'demo' && NEWS_API_SOURCES.newsapi.key.length > 10;
   const hasValidGNewsKey = NEWS_API_SOURCES.gnews.key && NEWS_API_SOURCES.gnews.key !== 'demo' && NEWS_API_SOURCES.gnews.key.length > 10;
   const hasValidCurrentsKey = NEWS_API_SOURCES.currentsapi.key && NEWS_API_SOURCES.currentsapi.key !== 'demo' && NEWS_API_SOURCES.currentsapi.key.length > 10;
 
-  // If no valid API keys are available, use mock data immediately
-  if (!hasValidNewsAPIKey && !hasValidGNewsKey && !hasValidCurrentsKey) {
-    console.info('No valid API keys found. Using mock health news data for demonstration.');
-    return await fetchDiverseMockData(options);
-  }
-
-  // Build strategies array based on available API keys
+  // Build strategies array - Start with FREE health organization sources (no API keys needed)
   const strategies = [];
   
+  // PRIORITY: Free health organization sources (WHO, CDC, PubMed) - Always available, no filtering
+  strategies.push(
+    () => fetchFromWHO(options),
+    () => fetchFromCDC(options),
+    () => fetchFromPubMed(options)
+  );
+  
+  // Add optional API sources if keys are available
   if (hasValidNewsAPIKey) {
     strategies.push(
       () => fetchFromPriorityHealthSources(options),
@@ -120,39 +160,49 @@ export const fetchHealthNews = async (options = {}) => {
   const primaryStrategy = apiStrategies.length > 0 ? apiStrategies[page % apiStrategies.length] : null;
   const fallbackStrategies = apiStrategies.filter(s => s !== primaryStrategy);
 
-  // Try primary strategy first (if available)
-  if (primaryStrategy) {
-    try {
-      const result = await primaryStrategy();
-      if (result.success && result.articles.length > 0) {
-        return {
-          ...result,
-          articles: deduplicateArticles(result.articles)
-        };
-      }
-    } catch (error) {
-      console.warn('Primary news source failed:', error.message);
+  console.log(`📰 News fetch: Page ${page}, Total sources: ${apiStrategies.length}`);
+
+  // OPTIMIZATION: Try all sources in parallel with timeout
+  // This dramatically reduces load time from sequential waiting
+  const TIMEOUT_MS = 5000; // 5 second timeout per source
+  
+  const fetchWithTimeout = (fetchFn, timeout) => {
+    return Promise.race([
+      fetchFn(),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Source timeout')), timeout)
+      )
+    ]);
+  };
+
+  // Try all sources in parallel
+  console.log(`🔄 Fetching from all ${apiStrategies.length} sources in parallel...`);
+  const results = await Promise.allSettled(
+    apiStrategies.map(strategy => fetchWithTimeout(strategy, TIMEOUT_MS))
+  );
+
+  // Find first successful result
+  for (let i = 0; i < results.length; i++) {
+    const result = results[i];
+    if (result.status === 'fulfilled' && result.value.success && result.value.articles.length > 0) {
+      console.log(`✅ Source succeeded: ${result.value.source}, ${result.value.articles.length} articles`);
+      return {
+        ...result.value,
+        articles: deduplicateArticles(result.value.articles)
+      };
     }
   }
 
-  // Try fallback strategies
-  for (const fetchSource of fallbackStrategies) {
-    try {
-      const result = await fetchSource();
-      if (result.success && result.articles.length > 0) {
-        return {
-          ...result,
-          articles: deduplicateArticles(result.articles)
-        };
-      }
-    } catch (error) {
-      console.warn('Fallback news source failed:', error.message);
-      continue;
+  // If all parallel requests failed, log the errors
+  console.warn('⚠️ All news sources failed');
+  results.forEach((result, i) => {
+    if (result.status === 'rejected') {
+      console.warn(`Source ${i + 1} error:`, result.reason?.message || 'Unknown error');
     }
-  }
+  });
 
   // If all API sources fail, return diverse mock data
-  console.info('All API sources failed. Using mock health news data.');
+  console.warn('❌ All news sources failed. Using mock health news data.');
   return await fetchDiverseMockData(options);
 };
 
@@ -258,10 +308,13 @@ const fetchFromNewsAPI = async (options) => {
   
   let query = buildHealthQuery(category, searchQuery);
   
+  // Request more articles to ensure we have enough after filtering
+  const requestSize = Math.max(pageSize * 3, 60);
+  
   const url = `${NEWS_API_SOURCES.newsapi.baseUrl}${NEWS_API_SOURCES.newsapi.endpoint}?` +
     `q=${encodeURIComponent(query)}&` +
     `page=${page}&` +
-    `pageSize=${pageSize}&` +
+    `pageSize=${requestSize}&` +
     `sortBy=publishedAt&` +
     `language=en&` +
     `apiKey=${NEWS_API_SOURCES.newsapi.key}`;
@@ -275,11 +328,48 @@ const fetchFromNewsAPI = async (options) => {
   const data = await response.json();
   
   if (data.status === 'ok' && data.articles) {
+    const transformedArticles = data.articles.map(transformNewsAPIArticle);
+    const healthArticles = filterHealthArticles(transformedArticles);
+    
+    console.log('NewsAPI - Total received:', data.articles.length, 'Health articles after filter:', healthArticles.length);
+    
+    // If we got very few health articles, be more lenient
+    if (healthArticles.length < 5 && transformedArticles.length > 0) {
+      console.log('Very few health articles, using lenient filter');
+      // Use all articles that at least mention health/medical in any way
+      const lenientArticles = transformedArticles.filter(article => {
+        const content = `${article.title} ${article.summary || ''}`.toLowerCase();
+        return content.includes('health') || content.includes('medical') || 
+               content.includes('disease') || content.includes('doctor') ||
+               content.includes('hospital') || content.includes('patient');
+      });
+      
+      if (lenientArticles.length > healthArticles.length) {
+        console.log('Lenient filter found', lenientArticles.length, 'articles');
+        const finalArticles = lenientArticles.slice(0, pageSize);
+        return {
+          success: true,
+          articles: finalArticles,
+          totalResults: lenientArticles.length,
+          hasMore: lenientArticles.length > pageSize,
+          source: 'NewsAPI'
+        };
+      }
+    }
+    
+    // Return the requested page size, or all if less
+    const finalArticles = healthArticles.slice(0, pageSize);
+    
+    // Only return if we have at least some health articles
+    if (finalArticles.length === 0) {
+      throw new Error('No health-related articles found');
+    }
+    
     return {
       success: true,
-      articles: data.articles.map(transformNewsAPIArticle),
-      totalResults: data.totalResults,
-      hasMore: (page * pageSize) < data.totalResults,
+      articles: finalArticles,
+      totalResults: healthArticles.length,
+      hasMore: healthArticles.length > pageSize,
       source: 'NewsAPI'
     };
   }
@@ -314,11 +404,19 @@ const fetchFromGNews = async (options) => {
   const data = await response.json();
   
   if (data.articles) {
+    const transformedArticles = data.articles.map(transformGNewsArticle);
+    const healthArticles = filterHealthArticles(transformedArticles);
+    
+    // Only return if we have health articles
+    if (healthArticles.length === 0) {
+      throw new Error('No health-related articles found');
+    }
+    
     return {
       success: true,
-      articles: data.articles.map(transformGNewsArticle),
-      totalResults: data.totalArticles,
-      hasMore: data.articles.length === pageSize,
+      articles: healthArticles,
+      totalResults: healthArticles.length,
+      hasMore: healthArticles.length === pageSize,
       source: 'GNews'
     };
   }
@@ -353,11 +451,19 @@ const fetchFromCurrentsAPI = async (options) => {
   const data = await response.json();
   
   if (data.news) {
+    const transformedArticles = data.news.map(transformCurrentsAPIArticle);
+    const healthArticles = filterHealthArticles(transformedArticles);
+    
+    // Only return if we have health articles
+    if (healthArticles.length === 0) {
+      throw new Error('No health-related articles found');
+    }
+    
     return {
       success: true,
-      articles: data.news.map(transformCurrentsAPIArticle),
-      totalResults: data.totalCount,
-      hasMore: data.news.length === pageSize,
+      articles: healthArticles,
+      totalResults: healthArticles.length,
+      hasMore: healthArticles.length === pageSize,
       source: 'CurrentsAPI'
     };
   }
@@ -365,20 +471,306 @@ const fetchFromCurrentsAPI = async (options) => {
   throw new Error('CurrentsAPI request failed');
 };
 
+// WHO News Feed implementation (RSS to JSON conversion)
+// WHO only publishes health news, so NO health filtering needed
+const fetchFromWHO = async (options) => {
+  const { pageSize = 20 } = options;
+  
+  try {
+    console.log('🌍 Fetching WHO news feeds...');
+    // Use RSS2JSON service to convert WHO RSS feeds to JSON
+    const feeds = [
+      'https://www.who.int/feeds/entity/mediacentre/news/en/rss.xml',
+      'https://www.who.int/feeds/entity/csr/don/en/rss.xml'
+    ];
+    
+    // Fetch both feeds in parallel for faster loading
+    const fetchPromises = feeds.map(async feedUrl => {
+      try {
+        const rss2jsonUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}&api_key=zukbawsifwpdl6yygfqpqscxkm9zgjpnbg9rynxs&count=${pageSize}`;
+        const response = await fetch(rss2jsonUrl);
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.status === 'ok' && data.items) {
+            return data.items.map(item => ({
+              id: item.guid || item.link,
+              title: item.title,
+              summary: item.description?.replace(/<[^>]*>/g, '').substring(0, 200) + '...' || '',
+              description: item.description?.replace(/<[^>]*>/g, '').substring(0, 200) + '...' || '',
+              content: item.content?.replace(/<[^>]*>/g, '') || item.description?.replace(/<[^>]*>/g, '') || '',
+              url: item.link,
+              imageUrl: item.enclosure?.link || item.thumbnail || 'https://www.who.int/images/default-source/logo/who-logo.png',
+              source: 'WHO',
+              author: 'World Health Organization',
+              publishedAt: item.pubDate,
+              category: 'breaking',
+              tags: ['WHO', 'Global Health', 'Public Health']
+            }));
+          }
+        }
+      } catch (feedError) {
+        console.warn('WHO feed fetch error:', feedError.message);
+      }
+      return [];
+    });
+    
+    const results = await Promise.all(fetchPromises);
+    const articles = results.flat();
+    
+    if (articles.length > 0) {
+      console.log(`✅ WHO: Successfully fetched ${articles.length} articles`);
+      
+      // Sort by date - newest first
+      articles.sort((a, b) => {
+        const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+        const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+        if (isNaN(dateA) && isNaN(dateB)) return 0;
+        if (isNaN(dateA)) return 1;
+        if (isNaN(dateB)) return -1;
+        return dateB - dateA;
+      });
+      
+      return {
+        success: true,
+        articles: articles.slice(0, pageSize),
+        totalResults: articles.length,
+        hasMore: false,
+        source: 'WHO'
+      };
+    }
+    
+    throw new Error('No WHO articles fetched');
+  } catch (error) {
+    console.error('❌ WHO fetch error:', error.message);
+    throw new Error(`WHO fetch error: ${error.message}`);
+  }
+};
+
+// CDC News API implementation
+// CDC only publishes health news, so NO health filtering needed
+const fetchFromCDC = async (options) => {
+  const { pageSize = 20, searchQuery = '' } = options;
+  
+  try {
+    console.log('🏥 Fetching CDC news...');
+    // Use only ONE topic to reduce API response size and time
+    const topic = searchQuery || 'health';
+    
+    // Limit max to a reasonable number to avoid massive responses
+    const maxArticles = Math.min(pageSize * 5, 100); // Get 5x what we need, max 100
+    const url = `https://tools.cdc.gov/api/v2/resources/media?topic=${encodeURIComponent(topic)}&max=${maxArticles}`;
+    
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('CDC API request failed');
+    
+    const data = await response.json();
+    if (!data.results || data.results.length === 0) {
+      throw new Error('No CDC articles found');
+    }
+    
+    console.log(`CDC topic "${topic}": Received ${data.results.length} articles`);
+    
+    // Debug: Log first article structure to understand available fields
+    if (data.results.length > 0) {
+      const sample = data.results[0];
+      console.log('CDC article sample fields:', {
+        id: sample.id,
+        name: sample.name,
+        url: sample.url,
+        sourceUrl: sample.sourceUrl,
+        permalinkUrl: sample.permalinkUrl,
+        contentUrl: sample.contentUrl,
+        syndicateUrl: sample.syndicateUrl
+      });
+    }
+    
+    // Process and sort articles efficiently
+    const articles = data.results
+      .slice(0, maxArticles) // Limit processing to avoid hanging
+      .map(item => {
+        // Extract the correct URL - CDC API has different URL fields
+        // Priority: sourceUrl (actual article) > syndicateUrl > permalinkUrl > contentUrl
+        let articleUrl = item.sourceUrl || item.syndicateUrl || item.permalinkUrl || item.contentUrl;
+        
+        // Fallback: if no valid URL or if it's an API URL, construct a CDC link
+        if (!articleUrl || articleUrl.includes('/api/v2/resources')) {
+          articleUrl = item.sourceUrl || `https://www.cdc.gov/media/releases/${item.id || ''}`;
+        }
+        
+        return {
+          id: item.id || `cdc-${Date.now()}-${Math.random()}`,
+          title: item.name || item.title || 'CDC Health Update',
+          summary: item.description?.substring(0, 200) + '...' || '',
+          description: item.description?.substring(0, 200) + '...' || '',
+          content: item.description || '',
+          url: articleUrl,
+          imageUrl: item.thumbnailUrl || 'https://www.cdc.gov/homepage/images/centers-for-disease-control-and-prevention.png',
+          source: 'CDC',
+          author: 'Centers for Disease Control and Prevention',
+          publishedAt: item.datePublished || item.publishDate || new Date().toISOString(),
+          category: 'prevention',
+          tags: ['CDC', 'Prevention', topic]
+        };
+      })
+      .sort((a, b) => {
+        // Sort by date inline - newest first
+        const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+        const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+        if (isNaN(dateA) && isNaN(dateB)) return 0;
+        if (isNaN(dateA)) return 1;
+        if (isNaN(dateB)) return -1;
+        return dateB - dateA;
+      })
+      .slice(0, pageSize); // Take only what we need after sorting
+    
+    console.log(`✅ CDC: Processed ${articles.length} articles. First article date:`, articles[0]?.publishedAt);
+    
+    return {
+      success: true,
+      articles: articles,
+      totalResults: articles.length,
+      hasMore: false,
+      source: 'CDC'
+    };
+  } catch (error) {
+    console.error('❌ CDC fetch error:', error.message);
+    throw new Error(`CDC fetch error: ${error.message}`);
+  }
+};
+
+// PubMed Research Articles implementation
+const fetchFromPubMed = async (options) => {
+  const { pageSize = 20, searchQuery = '', category = 'all' } = options;
+  
+  try {
+    // Build search query - PubMed is already medical, so no need for strict health filtering
+    let query = searchQuery || 'health medicine medical disease';
+    
+    // For category-specific searches
+    if (!searchQuery && category !== 'all' && CATEGORY_KEYWORDS[category]) {
+      query = CATEGORY_KEYWORDS[category].join(' OR ');
+    }
+    
+    // Only search recent articles (last 30 days for faster results)
+    query = `${query}[Title/Abstract] AND "last 30 days"[PDat]`;
+    
+    // Reduce to 10 articles for faster performance
+    const maxResults = Math.min(pageSize, 10);
+    
+    // Step 1: Search for article IDs
+    const searchUrl = `${NEWS_API_SOURCES.pubmed.baseUrl}${NEWS_API_SOURCES.pubmed.searchEndpoint}?` +
+      `db=pubmed&term=${encodeURIComponent(query)}&retmax=${maxResults}&retmode=json`;
+    
+    console.log('🔍 PubMed search:', query);
+    const searchResponse = await fetch(searchUrl);
+    if (!searchResponse.ok) throw new Error('PubMed search failed');
+    
+    const searchData = await searchResponse.json();
+    const ids = searchData.esearchresult?.idlist || [];
+    
+    console.log(`📊 PubMed found ${ids.length} article IDs`);
+    
+    if (ids.length === 0) {
+      throw new Error('No PubMed articles found');
+    }
+    
+    // Step 2: Fetch article summaries
+    const summaryUrl = `${NEWS_API_SOURCES.pubmed.baseUrl}${NEWS_API_SOURCES.pubmed.summaryEndpoint}?` +
+      `db=pubmed&id=${ids.join(',')}&retmode=json`;
+    
+    const summaryResponse = await fetch(summaryUrl);
+    if (!summaryResponse.ok) throw new Error('PubMed summary fetch failed');
+    
+    const summaryData = await summaryResponse.json();
+    const articles = [];
+    
+    if (summaryData.result) {
+      for (const id of ids) {
+        const article = summaryData.result[id];
+        if (article) {
+          articles.push({
+            id: `pubmed-${id}`,
+            title: article.title || 'Untitled Research',
+            summary: article.title?.substring(0, 200) + '...' || '',
+            description: article.title?.substring(0, 200) + '...' || '',
+            content: `${article.title || ''}\n\nAuthors: ${article.authors?.map(a => a.name).join(', ') || 'Unknown'}\n\nSource: ${article.source || 'PubMed'}`,
+            url: `https://pubmed.ncbi.nlm.nih.gov/${id}/`,
+            imageUrl: 'https://www.ncbi.nlm.nih.gov/corehtml/pmc/pmcgifs/pubmed-logo.png',
+            source: 'PubMed',
+            author: article.authors?.[0]?.name || 'Research Team',
+            publishedAt: article.pubdate || new Date().toISOString(),
+            category: 'research',
+            tags: ['PubMed', 'Research', 'Medical Study']
+          });
+        }
+      }
+    }
+    
+    if (articles.length > 0) {
+      console.log(`✅ PubMed: Successfully fetched ${articles.length} articles`);
+      
+      // Sort by date - newest first
+      articles.sort((a, b) => {
+        const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+        const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+        if (isNaN(dateA) && isNaN(dateB)) return 0;
+        if (isNaN(dateA)) return 1;
+        if (isNaN(dateB)) return -1;
+        return dateB - dateA;
+      });
+      
+      return {
+        success: true,
+        articles: articles,
+        totalResults: articles.length,
+        hasMore: false,
+        source: 'PubMed'
+      };
+    }
+    
+    throw new Error('No PubMed articles fetched');
+  } catch (error) {
+    console.error('❌ PubMed fetch error:', error.message);
+    throw new Error(`PubMed fetch error: ${error.message}`);
+  }
+};
+
 // Build health-focused search query
 const buildHealthQuery = (category, searchQuery) => {
-  let query = searchQuery || '';
-  
-  if (category !== 'all' && CATEGORY_KEYWORDS[category]) {
-    const categoryTerms = CATEGORY_KEYWORDS[category].join(' OR ');
-    query = query ? `(${query}) AND (${categoryTerms})` : categoryTerms;
+  // If user provided a specific search, use it with strict health context
+  if (searchQuery) {
+    return `${searchQuery} (health OR medical OR disease OR healthcare)`;
   }
   
-  // Always include health context
-  const healthContext = HEALTH_KEYWORDS.slice(0, 10).join(' OR ');
-  query = query ? `(${query}) AND (${healthContext})` : healthContext;
+  // Category-specific health queries
+  if (category !== 'all' && CATEGORY_KEYWORDS[category]) {
+    const categoryTerm = CATEGORY_KEYWORDS[category][0];
+    return `${categoryTerm} (health OR medical OR healthcare)`;
+  }
   
-  return query;
+  // Specific, diverse health queries that return relevant results
+  const healthQueries = [
+    'medical breakthrough research',
+    'disease outbreak WHO', 
+    'vaccine development clinical trial',
+    'healthcare innovation hospital',
+    'CDC health guidelines',
+    'cancer treatment research',
+    'mental health therapy',
+    'diabetes management medical',
+    'heart disease prevention',
+    'infectious disease control',
+    'pharmaceutical drug approval',
+    'medical device innovation',
+    'public health emergency',
+    'health ministry announcement',
+    'clinical study results'
+  ];
+  
+  // Rotate through queries based on time for variety
+  const index = Math.floor(Date.now() / 60000) % healthQueries.length;
+  return healthQueries[index];
 };
 
 // Transform NewsAPI article format
@@ -438,6 +830,52 @@ const transformCurrentsAPIArticle = (article) => ({
   views: Math.floor(Math.random() * 5000) + 100
 });
 
+// Filter articles to ensure they are health-related
+const isHealthRelated = (article) => {
+  const title = (article.title || '').toLowerCase();
+  const summary = (article.summary || article.description || '').toLowerCase();
+  const source = (article.source || '').toLowerCase();
+  const content = `${title} ${summary}`;
+  
+  // Trusted health sources - auto-pass
+  const trustedHealthSources = [
+    'health', 'medical', 'medicine', 'hospital', 'clinic', 'mayo', 'cleveland',
+    'hopkins', 'nih', 'cdc', 'who', 'webmd', 'healthline', 'medscape'
+  ];
+  
+  const isTrustedSource = trustedHealthSources.some(term => source.includes(term));
+  if (isTrustedSource) return true;
+  
+  // Basic health/medical terms - must have at least one
+  const basicHealthTerms = [
+    'health', 'medical', 'medicine', 'healthcare', 'hospital', 'doctor', 'physician',
+    'disease', 'treatment', 'vaccine', 'drug', 'patient', 'diagnosis', 'symptoms',
+    'cancer', 'diabetes', 'virus', 'infection', 'outbreak', 'epidemic',
+    'clinical', 'pharmaceutical', 'surgery', 'who', 'cdc', 'fda'
+  ];
+  
+  // Check if content contains health terms
+  const hasHealthTerm = basicHealthTerms.some(term => content.includes(term));
+  if (!hasHealthTerm) return false;
+  
+  // Only exclude if it's CLEARLY not health related
+  const obviouslyNotHealth = [
+    'nfl game', 'nba game', 'football match', 'basketball game', 'super bowl',
+    'red carpet', 'box office', 'movie premiere', 'concert tour',
+    'bitcoin price', 'stock market crash', 'cryptocurrency exchange',
+    'video game release', 'gaming tournament', 'esports'
+  ];
+  
+  const isObviouslyNotHealth = obviouslyNotHealth.some(term => content.includes(term));
+  
+  return !isObviouslyNotHealth;
+};
+
+// Filter articles array to keep only health-related content
+const filterHealthArticles = (articles) => {
+  return articles.filter(isHealthRelated);
+};
+
 // Enhanced mock data for fallback
 const fetchEnhancedMockData = async (options) => {
   const { page, pageSize, category, searchQuery } = options;
@@ -487,7 +925,11 @@ const generateDynamicMockNews = (count, category, searchQuery) => {
 
 // Utility functions
 const generateArticleId = (url) => {
-  return btoa(url).replace(/[^a-zA-Z0-9]/g, '').substring(0, 16);
+  // Create a more unique ID by combining timestamp, random number, and URL hash
+  const timestamp = Date.now().toString(36);
+  const random = Math.random().toString(36).substring(2, 8);
+  const urlHash = btoa(url).replace(/[^a-zA-Z0-9]/g, '').substring(0, 8);
+  return `${timestamp}-${random}-${urlHash}`;
 };
 
 const generateSummary = (content) => {
@@ -756,7 +1198,7 @@ const generateOfficialHealthArticles = (count) => {
     const condition = conditions[index % conditions.length];
     
     return {
-      _id: `official-${Date.now()}-${index}`,
+      _id: `official-${Date.now()}-${Math.random().toString(36).substring(2)}-${index}`,
       title: `${source} ${topic} ${condition}`,
       summary: `The ${source} has announced important updates regarding ${condition}. This comprehensive report outlines new protocols and recommendations for healthcare professionals and the public.`,
       content: `The ${source} has announced important updates regarding ${condition}. This comprehensive report outlines new protocols and recommendations for healthcare professionals and the public. These guidelines are based on the latest scientific evidence and expert consensus. Healthcare providers are encouraged to review and implement these recommendations in their practice to improve patient outcomes.`,
@@ -764,7 +1206,7 @@ const generateOfficialHealthArticles = (count) => {
       author: `${source} Communications Team`,
       source: source,
       publishedAt: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
-      url: `https://${source.toLowerCase().replace(' ', '')}.gov/news/latest`,
+      url: `https://${source.toLowerCase().replace(' ', '')}.gov/news/latest-${Date.now()}-${index}`,
       imageUrl: generateMockImageUrl('official'),
       tags: ['official', 'guidelines', condition.split(' ')[0]],
       readTime: Math.floor(Math.random() * 5) + 3,
@@ -799,7 +1241,7 @@ const generateResearchArticles = (count) => {
     const finding = findings[index % findings.length];
     
     return {
-      _id: `research-${Date.now()}-${index}`,
+      _id: `research-${Date.now()}-${Math.random().toString(36).substring(2)}-${index}`,
       title: `${study} ${finding}`,
       summary: `A groundbreaking study published in ${journal} provides new insights into ${finding}. The research involved thousands of participants and offers promising implications for future treatments.`,
       content: `A groundbreaking study published in ${journal} provides new insights into ${finding}. The research involved thousands of participants and offers promising implications for future treatments. The study methodology was rigorous, involving peer review and statistical analysis. Results show significant improvements in patient outcomes and provide a foundation for further research in this area.`,
@@ -807,7 +1249,7 @@ const generateResearchArticles = (count) => {
       author: `Dr. ${['Smith', 'Johnson', 'Williams', 'Brown', 'Davis'][index % 5]} et al.`,
       source: journal,
       publishedAt: new Date(Date.now() - Math.random() * 14 * 24 * 60 * 60 * 1000).toISOString(),
-      url: `https://${journal.toLowerCase().replace(' ', '')}.com/articles/latest`,
+      url: `https://${journal.toLowerCase().replace(' ', '')}.com/articles/latest-${Date.now()}-${index}`,
       imageUrl: generateMockImageUrl('research'),
       tags: ['research', 'study', 'medical'],
       readTime: Math.floor(Math.random() * 8) + 5,
@@ -836,7 +1278,7 @@ const generateInternationalNewsArticles = (count) => {
     const event = events[index % events.length];
     
     return {
-      _id: `international-${Date.now()}-${index}`,
+      _id: `international-${Date.now()}-${Math.random().toString(36).substring(2)}-${index}`,
       title: `${event} ${location}`,
       summary: `${source} reports on significant health developments in ${location}. The story highlights global health cooperation and innovative approaches to addressing medical challenges worldwide.`,
       content: `${source} reports on significant health developments in ${location}. The story highlights global health cooperation and innovative approaches to addressing medical challenges worldwide. Local authorities are working closely with international health organizations to ensure effective implementation of health initiatives and policies.`,
@@ -844,7 +1286,7 @@ const generateInternationalNewsArticles = (count) => {
       author: `${source} Health Correspondent`,
       source: source,
       publishedAt: new Date(Date.now() - Math.random() * 3 * 24 * 60 * 60 * 1000).toISOString(),
-      url: `https://${source.toLowerCase().replace(' ', '')}.com/health/international`,
+      url: `https://${source.toLowerCase().replace(' ', '')}.com/health/international-${Date.now()}-${index}`,
       imageUrl: generateMockImageUrl('international'),
       tags: ['international', 'global health', location.toLowerCase()],
       readTime: Math.floor(Math.random() * 6) + 3,
@@ -873,7 +1315,7 @@ const generateHealthTechArticles = (count) => {
     const development = developments[index % developments.length];
     
     return {
-      _id: `healthtech-${Date.now()}-${index}`,
+      _id: `healthtech-${Date.now()}-${Math.random().toString(36).substring(2)}-${index}`,
       title: `${company} ${development} ${tech}`,
       summary: `In a major advancement for digital health, ${company} has made significant progress with their ${tech}. This innovation promises to transform patient care and improve health outcomes globally.`,
       content: `In a major advancement for digital health, ${company} has made significant progress with their ${tech}. This innovation promises to transform patient care and improve health outcomes globally. The technology leverages cutting-edge algorithms and user-friendly interfaces to provide accessible healthcare solutions for patients and providers alike.`,
@@ -881,7 +1323,7 @@ const generateHealthTechArticles = (count) => {
       author: 'Health Tech Reporter',
       source: company,
       publishedAt: new Date(Date.now() - Math.random() * 5 * 24 * 60 * 60 * 1000).toISOString(),
-      url: `https://${company.toLowerCase().replace(' ', '')}.com/health/news`,
+      url: `https://${company.toLowerCase().replace(' ', '')}.com/health/news-${Date.now()}-${index}`,
       imageUrl: generateMockImageUrl('technology'),
       tags: ['technology', 'innovation', 'digital health'],
       readTime: Math.floor(Math.random() * 7) + 4,

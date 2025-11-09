@@ -101,17 +101,24 @@ function DoctorConsultation() {
       }
       
       console.log('Fetching doctors with params:', params);
-      const response = await consultationAPI.getAvailableDoctors(params).catch(err => {
-        console.log('API not available, using enhanced mock data');
-        return null;
-      });
+      
+      try {
+        const response = await consultationAPI.getAvailableDoctors(params);
+        
+        if (response?.data?.success && response.data.data?.doctors) {
+          const doctorsArray = response.data.data.doctors;
+          console.log(`Loaded ${doctorsArray.length} doctors from database`);
+          setDoctors(doctorsArray);
+          setIsLoading(false);
+          return;
+        }
+      } catch (apiError) {
+        console.error('API call failed:', apiError);
+        toast.error('Could not load doctors from database. Showing sample data.');
+      }
 
-      if (response?.data?.data?.doctors) {
-        const doctorsArray = response.data.data.doctors;
-        setDoctors(doctorsArray);
-      } else {
-        // Enhanced mock data with Indian doctors and realistic details
-        const mockDoctors = [
+      // Enhanced mock data with Indian doctors and realistic details (FALLBACK ONLY)
+      const mockDoctors = [
           {
             _id: '1',
             name: 'Dr. Rajesh Kumar',
@@ -282,7 +289,6 @@ function DoctorConsultation() {
         });
 
         setDoctors(filteredDoctors);
-      }
       
     } catch (error) {
       console.error('Error fetching doctors:', error);
@@ -400,16 +406,28 @@ function DoctorConsultation() {
       return;
     }
 
+    // Validate symptoms length (minimum 10 characters required by backend)
+    if (symptoms.trim().length < 10) {
+      toast.error('Please provide a more detailed description of symptoms (at least 10 characters)');
+      return;
+    }
+
     setIsBooking(true);
     
     try {
+      // Combine date and time into ISO8601 format
+      const dateTimeString = `${selectedDate}T${selectedTime}:00`;
+      const preferredDateTime = new Date(dateTimeString).toISOString();
+
       const bookingData = {
         doctorId: selectedDoctor._id,
-        date: selectedDate,
-        time: selectedTime,
-        type: consultationType,
+        preferredDateTime,
+        consultationType: consultationType,
         symptoms: symptoms.trim(),
-        notes: `Consultation requested via MediSync platform`
+        urgency: 'medium', // Default urgency level
+        medicalHistory: '',
+        currentMedications: [],
+        allergies: []
       };
 
       console.log('Booking consultation:', bookingData);
@@ -428,7 +446,15 @@ function DoctorConsultation() {
       
     } catch (error) {
       console.error('Booking error:', error);
-      toast.error(error.response?.data?.message || 'Failed to book consultation');
+      console.error('Error response:', error.response);
+      
+      // Show detailed validation errors if available
+      if (error.response?.data?.errors && Array.isArray(error.response.data.errors)) {
+        const errorMessages = error.response.data.errors.map(err => err.msg).join(', ');
+        toast.error(`Validation error: ${errorMessages}`);
+      } else {
+        toast.error(error.response?.data?.message || 'Failed to book consultation');
+      }
     } finally {
       setIsBooking(false);
     }
@@ -531,7 +557,14 @@ function DoctorConsultation() {
                   </div>
                   <div>
                     <span className="font-medium text-gray-700">Education:</span>
-                    <span className="ml-2 text-gray-600">{selectedDoctor.education || 'N/A'}</span>
+                    <span className="ml-2 text-gray-600">
+                      {Array.isArray(selectedDoctor.education) 
+                        ? selectedDoctor.education.map(edu => `${edu.degree} in ${edu.fieldOfStudy || 'Medicine'}`).join(', ')
+                        : selectedDoctor.education?.degree 
+                          ? `${selectedDoctor.education.degree} in ${selectedDoctor.education.fieldOfStudy || 'Medicine'}`
+                          : 'N/A'
+                      }
+                    </span>
                   </div>
                   <div>
                     <span className="font-medium text-gray-700">Languages:</span>

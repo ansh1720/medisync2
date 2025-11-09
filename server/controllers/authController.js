@@ -6,6 +6,7 @@
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 const User = require('../models/User');
+const Doctor = require('../models/Doctor');
 
 /**
  * Generate JWT token
@@ -58,6 +59,32 @@ const register = async (req, res, next) => {
     });
 
     await user.save();
+
+    // If role is doctor, create a Doctor document
+    if (role === 'doctor') {
+      try {
+        const doctor = new Doctor({
+          name: user.name,
+          email: user.email,
+          specialty: 'general', // Default, will be updated during verification
+          contact: {
+            phone: phone || '',
+            officeAddress: {
+              country: 'United States'
+            }
+          },
+          userRef: user._id,
+          createdBy: user._id,
+          verificationStatus: 'not_submitted',
+          isVerified: false,
+          isActive: true
+        });
+        await doctor.save();
+      } catch (doctorError) {
+        console.error('Error creating doctor document:', doctorError);
+        // Don't fail registration if doctor creation fails
+      }
+    }
 
     // Generate token
     const token = generateToken(user._id);
