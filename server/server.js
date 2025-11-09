@@ -28,7 +28,8 @@ app.use(cors({
   origin: [
     process.env.CLIENT_URL || "http://localhost:3000",
     "http://localhost:5173",
-    "http://localhost:3000"
+    "http://localhost:3000",
+    "https://ansh1720.github.io"
   ],
   credentials: true
 }));
