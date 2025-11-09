@@ -18,6 +18,9 @@ const diseaseRoutes = require('./routes/diseaseRoutes');
 const app = express();
 const server = createServer(app);
 
+// Trust proxy - required for Render deployment
+app.set('trust proxy', 1);
+
 // Socket.IO setup
 const { initializeSocket } = require('./utils/socket');
 const { io, broadcastAlert } = initializeSocket(server);
