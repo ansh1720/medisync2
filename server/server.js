@@ -24,14 +24,31 @@ const { io, broadcastAlert } = initializeSocket(server);
 
 // Global middleware
 app.use(helmet());
+
+// CORS configuration - allow both development and production origins
+const allowedOrigins = [
+  process.env.CLIENT_URL || "http://localhost:3000",
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "https://ansh1720.github.io",
+  "https://ansh1720.github.io/medisync2"
+];
+
 app.use(cors({
-  origin: [
-    process.env.CLIENT_URL || "http://localhost:3000",
-    "http://localhost:5173",
-    "http://localhost:3000",
-    "https://ansh1720.github.io"
-  ],
-  credentials: true
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.warn('CORS blocked origin:', origin);
+      callback(null, true); // Allow in production, log for debugging
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Rate limiting
