@@ -50,9 +50,44 @@ function HospitalLocator() {
   const [placeSearch, setPlaceSearch] = useState('');
   const [isSearchingPlace, setIsSearchingPlace] = useState(false);
 
-  // Track page visit
+  // Track page visit and auto-detect location
   useEffect(() => {
     trackFeatureUsage('hospitalLocator', { source: 'direct' });
+    
+    // Auto-detect user location on page load
+    if (!navigator.geolocation) {
+      // If geolocation not supported, use NYC as default
+      const nycLocation = { latitude: 40.7128, longitude: -74.0060 };
+      setUserLocation(nycLocation);
+      setCurrentLocationName('New York, NY');
+      searchHospitals(nycLocation);
+    } else {
+      // Try to get user's actual location
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const location = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude
+          };
+          setUserLocation(location);
+          console.log('Auto-detected user location:', location);
+          searchHospitals(location);
+        },
+        (error) => {
+          // If location access denied or error, fallback to NYC
+          console.log('Location access denied or error, using NYC as default');
+          const nycLocation = { latitude: 40.7128, longitude: -74.0060 };
+          setUserLocation(nycLocation);
+          setCurrentLocationName('New York, NY (Default)');
+          searchHospitals(nycLocation);
+        },
+        {
+          enableHighAccuracy: false, // Don't need high accuracy for initial load
+          timeout: 5000, // 5 second timeout
+          maximumAge: 300000 // 5 minutes
+        }
+      );
+    }
   }, []);
   const [currentLocationName, setCurrentLocationName] = useState('');
   const [dataSource, setDataSource] = useState('maps'); // Always use real data now
@@ -665,19 +700,19 @@ function HospitalLocator() {
         {/* Search Form */}
         <div className="card mb-8">
           <div className="space-y-6">
-            {/* Location Section */}
+            {/* Location Section - Auto-detected */}
             <div>
-              <label className="label">Your Location (Optional - Leave blank to see all hospitals)</label>
+              <label className="label">Your Location (Auto-detected)</label>
               <div className="space-y-3">
                 <div className="flex gap-2">
                   <div className="flex-1">
                     {userLocation ? (
                       <div className="input bg-green-50 text-green-700">
-                        Location set: {currentLocationName || `${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)}`}
+                        📍 {currentLocationName || `${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)}`}
                       </div>
                     ) : (
                       <div className="input bg-blue-50 text-blue-700">
-                        Showing all hospitals - Add location for distance-based search
+                        🔍 Detecting your location...
                       </div>
                     )}
                   </div>
@@ -690,10 +725,10 @@ function HospitalLocator() {
                     {isGettingLocation ? (
                       <div className="flex items-center">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Getting...
+                        Detecting...
                       </div>
                     ) : (
-                      'Auto Detect'
+                      'Refresh Location'
                     )}
                   </button>
                   <button
@@ -701,7 +736,7 @@ function HospitalLocator() {
                     onClick={() => {
                       const nycLocation = { latitude: 40.7128, longitude: -74.0060 };
                       setUserLocation(nycLocation);
-                      setCurrentLocationName('New York, NY');
+                      setCurrentLocationName('New York, NY (Test)');
                       toast.success('Test location set to NYC');
                       searchHospitals(nycLocation);
                     }}
