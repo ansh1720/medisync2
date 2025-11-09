@@ -125,17 +125,72 @@ export const fetchHealthNews = async (options = {}) => {
   const hasValidGNewsKey = NEWS_API_SOURCES.gnews.key && NEWS_API_SOURCES.gnews.key !== 'demo' && NEWS_API_SOURCES.gnews.key.length > 10;
   const hasValidCurrentsKey = NEWS_API_SOURCES.currentsapi.key && NEWS_API_SOURCES.currentsapi.key !== 'demo' && NEWS_API_SOURCES.currentsapi.key.length > 10;
 
-  // Build strategies array - Start with FREE health organization sources (no API keys needed)
+  // Build strategies array - PRIORITIZE WHO and CDC (official health sources)
   const strategies = [];
   
-  // PRIORITY: Free health organization sources (WHO, CDC, PubMed) - Always available, no filtering
-  strategies.push(
-    () => fetchFromWHO(options),
-    () => fetchFromCDC(options),
-    () => fetchFromPubMed(options)
-  );
+  // PRIORITY 1: WHO and CDC ONLY - Try these first sequentially
+  console.log(`📰 News fetch: Page ${page}, Prioritizing WHO and CDC...`);
   
-  // Add optional API sources if keys are available
+  const TIMEOUT_MS = 8000; // 8 second timeout per source
+  
+  const fetchWithTimeout = (fetchFn, timeout) => {
+    return Promise.race([
+      fetchFn(),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Source timeout')), timeout)
+      )
+    ]);
+  };
+
+  // TRY WHO FIRST
+  try {
+    console.log('🌍 Attempting WHO news...');
+    const whoResult = await fetchWithTimeout(() => fetchFromWHO(options), TIMEOUT_MS);
+    if (whoResult.success && whoResult.articles.length > 0) {
+      console.log(`✅ WHO succeeded: ${whoResult.articles.length} articles`);
+      return {
+        ...whoResult,
+        articles: deduplicateArticles(whoResult.articles)
+      };
+    }
+  } catch (whoError) {
+    console.warn('⚠️ WHO failed:', whoError.message);
+  }
+
+  // TRY CDC SECOND
+  try {
+    console.log('🏥 Attempting CDC news...');
+    const cdcResult = await fetchWithTimeout(() => fetchFromCDC(options), TIMEOUT_MS);
+    if (cdcResult.success && cdcResult.articles.length > 0) {
+      console.log(`✅ CDC succeeded: ${cdcResult.articles.length} articles`);
+      return {
+        ...cdcResult,
+        articles: deduplicateArticles(cdcResult.articles)
+      };
+    }
+  } catch (cdcError) {
+    console.warn('⚠️ CDC failed:', cdcError.message);
+  }
+
+  // TRY PUBMED THIRD
+  try {
+    console.log('📚 Attempting PubMed research...');
+    const pubmedResult = await fetchWithTimeout(() => fetchFromPubMed(options), TIMEOUT_MS);
+    if (pubmedResult.success && pubmedResult.articles.length > 0) {
+      console.log(`✅ PubMed succeeded: ${pubmedResult.articles.length} articles`);
+      return {
+        ...pubmedResult,
+        articles: deduplicateArticles(pubmedResult.articles)
+      };
+    }
+  } catch (pubmedError) {
+    console.warn('⚠️ PubMed failed:', pubmedError.message);
+  }
+
+  // PRIORITY 2: Only use other sources if WHO, CDC, and PubMed all fail
+  console.warn('⚠️ Primary health sources (WHO, CDC, PubMed) all failed. Trying backup sources...');
+  
+  // Build backup strategies
   if (hasValidNewsAPIKey) {
     strategies.push(
       () => fetchFromPriorityHealthSources(options),
@@ -152,56 +207,34 @@ export const fetchHealthNews = async (options = {}) => {
     strategies.push(() => fetchFromCurrentsAPI(options));
   }
 
-  // Always add mock data as fallback
-  strategies.push(() => fetchDiverseMockData(options));
+  // Try backup sources in parallel
+  if (strategies.length > 0) {
+    console.log(`🔄 Trying ${strategies.length} backup sources in parallel...`);
+    const results = await Promise.allSettled(
+      strategies.map(strategy => fetchWithTimeout(strategy, TIMEOUT_MS))
+    );
 
-  // Rotate strategies based on page for variety (excluding mock data)
-  const apiStrategies = strategies.slice(0, -1);
-  const primaryStrategy = apiStrategies.length > 0 ? apiStrategies[page % apiStrategies.length] : null;
-  const fallbackStrategies = apiStrategies.filter(s => s !== primaryStrategy);
-
-  console.log(`📰 News fetch: Page ${page}, Total sources: ${apiStrategies.length}`);
-
-  // OPTIMIZATION: Try all sources in parallel with timeout
-  // This dramatically reduces load time from sequential waiting
-  const TIMEOUT_MS = 5000; // 5 second timeout per source
-  
-  const fetchWithTimeout = (fetchFn, timeout) => {
-    return Promise.race([
-      fetchFn(),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Source timeout')), timeout)
-      )
-    ]);
-  };
-
-  // Try all sources in parallel
-  console.log(`🔄 Fetching from all ${apiStrategies.length} sources in parallel...`);
-  const results = await Promise.allSettled(
-    apiStrategies.map(strategy => fetchWithTimeout(strategy, TIMEOUT_MS))
-  );
-
-  // Find first successful result
-  for (let i = 0; i < results.length; i++) {
-    const result = results[i];
-    if (result.status === 'fulfilled' && result.value.success && result.value.articles.length > 0) {
-      console.log(`✅ Source succeeded: ${result.value.source}, ${result.value.articles.length} articles`);
-      return {
-        ...result.value,
-        articles: deduplicateArticles(result.value.articles)
-      };
+    // Find first successful result
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
+      if (result.status === 'fulfilled' && result.value.success && result.value.articles.length > 0) {
+        console.log(`✅ Backup source succeeded: ${result.value.source}, ${result.value.articles.length} articles`);
+        return {
+          ...result.value,
+          articles: deduplicateArticles(result.value.articles)
+        };
+      }
     }
+
+    // Log all backup errors
+    results.forEach((result, i) => {
+      if (result.status === 'rejected') {
+        console.warn(`Backup source ${i + 1} error:`, result.reason?.message || 'Unknown error');
+      }
+    });
   }
 
-  // If all parallel requests failed, log the errors
-  console.warn('⚠️ All news sources failed');
-  results.forEach((result, i) => {
-    if (result.status === 'rejected') {
-      console.warn(`Source ${i + 1} error:`, result.reason?.message || 'Unknown error');
-    }
-  });
-
-  // If all API sources fail, return diverse mock data
+  // LAST RESORT: Mock data
   console.warn('❌ All news sources failed. Using mock health news data.');
   return await fetchDiverseMockData(options);
 };
@@ -478,69 +511,98 @@ const fetchFromWHO = async (options) => {
   
   try {
     console.log('🌍 Fetching WHO news feeds...');
-    // Use RSS2JSON service to convert WHO RSS feeds to JSON
+    
+    // Try multiple RSS2JSON services for reliability
+    const rss2jsonServices = [
+      // Service 1: rss2json.com (with API key)
+      {
+        url: 'https://api.rss2json.com/v1/api.json',
+        key: 'zukbawsifwpdl6yygfqpqscxkm9zgjpnbg9rynxs'
+      },
+      // Service 2: rss2json.com (without API key - free tier)
+      {
+        url: 'https://api.rss2json.com/v1/api.json',
+        key: null
+      }
+    ];
+    
     const feeds = [
       'https://www.who.int/feeds/entity/mediacentre/news/en/rss.xml',
       'https://www.who.int/feeds/entity/csr/don/en/rss.xml'
     ];
     
-    // Fetch both feeds in parallel for faster loading
-    const fetchPromises = feeds.map(async feedUrl => {
+    // Try each service until one works
+    for (const service of rss2jsonServices) {
       try {
-        const rss2jsonUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}&api_key=zukbawsifwpdl6yygfqpqscxkm9zgjpnbg9rynxs&count=${pageSize}`;
-        const response = await fetch(rss2jsonUrl);
+        console.log(`Trying RSS2JSON service: ${service.url.includes('rss2json') ? 'rss2json.com' : 'alternative'}...`);
         
-        if (response.ok) {
-          const data = await response.json();
-          if (data.status === 'ok' && data.items) {
-            return data.items.map(item => ({
-              id: item.guid || item.link,
-              title: item.title,
-              summary: item.description?.replace(/<[^>]*>/g, '').substring(0, 200) + '...' || '',
-              description: item.description?.replace(/<[^>]*>/g, '').substring(0, 200) + '...' || '',
-              content: item.content?.replace(/<[^>]*>/g, '') || item.description?.replace(/<[^>]*>/g, '') || '',
-              url: item.link,
-              imageUrl: item.enclosure?.link || item.thumbnail || 'https://www.who.int/images/default-source/logo/who-logo.png',
-              source: 'WHO',
-              author: 'World Health Organization',
-              publishedAt: item.pubDate,
-              category: 'breaking',
-              tags: ['WHO', 'Global Health', 'Public Health']
-            }));
+        // Fetch both feeds in parallel for faster loading
+        const fetchPromises = feeds.map(async feedUrl => {
+          try {
+            let rss2jsonUrl = `${service.url}?rss_url=${encodeURIComponent(feedUrl)}&count=${pageSize}`;
+            if (service.key) {
+              rss2jsonUrl += `&api_key=${service.key}`;
+            }
+            
+            const response = await fetch(rss2jsonUrl);
+            
+            if (response.ok) {
+              const data = await response.json();
+              if (data.status === 'ok' && data.items && data.items.length > 0) {
+                console.log(`✅ WHO feed fetched: ${data.items.length} items from ${feedUrl.includes('don') ? 'Disease Outbreak' : 'News'}`);
+                return data.items.map(item => ({
+                  id: item.guid || item.link,
+                  title: item.title,
+                  summary: item.description?.replace(/<[^>]*>/g, '').substring(0, 200) + '...' || '',
+                  description: item.description?.replace(/<[^>]*>/g, '').substring(0, 200) + '...' || '',
+                  content: item.content?.replace(/<[^>]*>/g, '') || item.description?.replace(/<[^>]*>/g, '') || '',
+                  url: item.link,
+                  imageUrl: item.enclosure?.link || item.thumbnail || 'https://www.who.int/images/default-source/logo/who-logo.png',
+                  source: 'WHO',
+                  author: 'World Health Organization',
+                  publishedAt: item.pubDate,
+                  category: 'breaking',
+                  tags: ['WHO', 'Global Health', 'Public Health']
+                }));
+              }
+            }
+          } catch (feedError) {
+            console.warn(`WHO feed ${feedUrl} fetch error:`, feedError.message);
           }
+          return [];
+        });
+        
+        const results = await Promise.all(fetchPromises);
+        const articles = results.flat();
+        
+        if (articles.length > 0) {
+          console.log(`✅ WHO: Successfully fetched ${articles.length} articles`);
+          
+          // Sort by date - newest first
+          articles.sort((a, b) => {
+            const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+            const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+            if (isNaN(dateA) && isNaN(dateB)) return 0;
+            if (isNaN(dateA)) return 1;
+            if (isNaN(dateB)) return -1;
+            return dateB - dateA;
+          });
+          
+          return {
+            success: true,
+            articles: articles.slice(0, pageSize),
+            totalResults: articles.length,
+            hasMore: false,
+            source: 'WHO'
+          };
         }
-      } catch (feedError) {
-        console.warn('WHO feed fetch error:', feedError.message);
+      } catch (serviceError) {
+        console.warn(`RSS2JSON service failed:`, serviceError.message);
+        continue; // Try next service
       }
-      return [];
-    });
-    
-    const results = await Promise.all(fetchPromises);
-    const articles = results.flat();
-    
-    if (articles.length > 0) {
-      console.log(`✅ WHO: Successfully fetched ${articles.length} articles`);
-      
-      // Sort by date - newest first
-      articles.sort((a, b) => {
-        const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
-        const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
-        if (isNaN(dateA) && isNaN(dateB)) return 0;
-        if (isNaN(dateA)) return 1;
-        if (isNaN(dateB)) return -1;
-        return dateB - dateA;
-      });
-      
-      return {
-        success: true,
-        articles: articles.slice(0, pageSize),
-        totalResults: articles.length,
-        hasMore: false,
-        source: 'WHO'
-      };
     }
     
-    throw new Error('No WHO articles fetched');
+    throw new Error('All RSS2JSON services failed');
   } catch (error) {
     console.error('❌ WHO fetch error:', error.message);
     throw new Error(`WHO fetch error: ${error.message}`);
