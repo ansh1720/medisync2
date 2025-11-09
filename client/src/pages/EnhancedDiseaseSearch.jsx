@@ -56,11 +56,16 @@ function EnhancedDiseaseSearch() {
         trackSearch(query);
       }
       
+      // Use production API URL or localhost
+      const API_BASE = window.location.hostname === 'ansh1720.github.io' 
+        ? 'https://medisync-api-9043.onrender.com/api' 
+        : 'http://localhost:5000/api';
+      
       let url;
       if (isEnhancedSearch) {
-        url = `http://localhost:5000/api/diseases/enhanced-search?query=${encodeURIComponent(query)}`;
+        url = `${API_BASE}/diseases/enhanced-search?query=${encodeURIComponent(query)}`;
       } else {
-        url = `http://localhost:5000/api/diseases/search?query=${encodeURIComponent(query)}`;
+        url = `${API_BASE}/diseases/search?query=${encodeURIComponent(query)}`;
       }
 
       const response = await fetch(url);
@@ -95,8 +100,13 @@ function EnhancedDiseaseSearch() {
     }
 
     try {
+      // Use production API URL or localhost
+      const API_BASE = window.location.hostname === 'ansh1720.github.io' 
+        ? 'https://medisync-api-9043.onrender.com/api' 
+        : 'http://localhost:5000/api';
+        
       const response = await fetch(
-        `http://localhost:5000/api/diseases/symptom-analysis?symptoms=${encodeURIComponent(symptoms)}`
+        `${API_BASE}/diseases/symptom-analysis?symptoms=${encodeURIComponent(symptoms)}`
       );
       const data = await response.json();
 

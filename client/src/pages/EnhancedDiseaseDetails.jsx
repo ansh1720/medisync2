@@ -57,8 +57,14 @@ function EnhancedDiseaseDetails() {
   const fetchDiseaseDetails = async (diseaseName) => {
     try {
       setIsLoading(true);
+      
+      // Use production API URL or localhost
+      const API_BASE = window.location.hostname === 'ansh1720.github.io' 
+        ? 'https://medisync-api-9043.onrender.com/api' 
+        : 'http://localhost:5000/api';
+        
       const response = await fetch(
-        `http://localhost:5000/api/diseases/details/${encodeURIComponent(diseaseName)}`
+        `${API_BASE}/diseases/details/${encodeURIComponent(diseaseName)}`
       );
       
       if (response.ok) {
