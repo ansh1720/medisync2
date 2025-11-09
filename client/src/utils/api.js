@@ -1,7 +1,13 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// Use production API URL when deployed to GitHub Pages
+const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (window.location.hostname === 'ansh1720.github.io' 
+    ? 'https://medisync-api-9043.onrender.com/api' 
+    : 'http://localhost:5000/api');
+
+console.log('🔗 API Base URL:', API_BASE_URL);
 
 // Create axios instance
 const api = axios.create({
