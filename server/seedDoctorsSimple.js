@@ -6,7 +6,8 @@ const mongoose = require('mongoose');
 const Doctor = require('./models/Doctor');
 
 // Connect to MongoDB
-mongoose.connect('mongodb://localhost:27017/medisync', {
+const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/medisync';
+mongoose.connect(MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });

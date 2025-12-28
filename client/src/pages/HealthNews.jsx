@@ -345,9 +345,9 @@ function HealthNews() {
           </div>
         )}
 
-        {/* Articles Grid */}
+        {/* Articles List - Block Style */}
         {!isLoading && filteredArticles.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          <div className="space-y-4 mb-8">
             {filteredArticles.map((article, index) => {
               const articleId = article._id || article.id;
               const isBookmarked = bookmarkedArticles.has(articleId);
@@ -358,106 +358,71 @@ function HealthNews() {
                 <div
                   key={articleId}
                   ref={isLastArticle ? lastArticleElementRef : null}
-                  className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden"
+                  className="bg-white rounded-lg shadow hover:shadow-md transition-shadow duration-300 p-6 border border-gray-200"
                 >
-                  {/* Article Image */}
-                  {article.imageUrl && (
-                    <div className="h-48">
-                      <img
-                        src={article.imageUrl}
-                        alt={article.title}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                        }}
-                      />
-                    </div>
-                  )}
-
-                  <div className="p-6">
-                    {/* Priority Badge */}
-                    {article.priority === 'high' && (
-                      <span className="inline-block px-2 py-1 text-xs font-medium rounded-full mb-3 bg-red-100 text-red-800">
-                        Breaking
-                      </span>
-                    )}
-
-                    {/* Title */}
-                    <h3 className="text-xl font-bold text-gray-900 mb-3">
-                      {article.title}
-                    </h3>
-
-                    {/* Summary */}
-                    <p className="text-gray-600 mb-4">
-                      {article.summary || article.description || 'No description available'}
-                    </p>
-
-                    {/* Tags */}
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {(article.tags || []).slice(0, 3).map((tag) => (
-                        <span
-                          key={tag}
-                          className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
-                        >
-                          #{tag}
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      {/* Priority Badge */}
+                      {article.priority === 'high' && (
+                        <span className="inline-block px-2 py-1 text-xs font-medium rounded-full mb-2 bg-red-100 text-red-800">
+                          Breaking
                         </span>
-                      ))}
-                    </div>
+                      )}
 
-                    {/* Meta Information */}
-                    <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                      <div className="flex items-center space-x-4">
-                        <span>{article.author}</span>
+                      {/* Title */}
+                      <h3 className="text-lg font-bold text-gray-900 mb-2 hover:text-blue-600">
+                        <a
+                          href={article.url || '#'}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {article.title}
+                        </a>
+                      </h3>
+
+                      {/* Meta Information */}
+                      <div className="flex items-center flex-wrap gap-3 text-sm text-gray-500 mb-3">
+                        <span className="font-medium">{article.source}</span>
                         <span>•</span>
                         <span>{formatDate(article.publishedAt)}</span>
-                        <span>•</span>
-                        <span>{article.readTime} min read</span>
+                        {article.author && article.author !== 'Unknown' && (
+                          <>
+                            <span>•</span>
+                            <span>{article.author}</span>
+                          </>
+                        )}
                       </div>
-                      <div className="flex items-center">
-                        <EyeIcon className="h-4 w-4 mr-1" />
-                        <span>{article.views}</span>
-                      </div>
+
+                      {/* Tags */}
+                      {article.tags && article.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {(article.tags || []).slice(0, 4).map((tag) => (
+                            <span
+                              key={tag}
+                              className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full"
+                            >
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <button
-                          onClick={() => toggleLike(articleId)}
-                          className={`flex items-center space-x-1 ${
-                            isLiked ? 'text-red-600' : 'text-gray-400 hover:text-red-600'
-                          }`}
-                        >
-                          {isLiked ? (
-                            <HeartSolidIcon className="h-5 w-5" />
-                          ) : (
-                            <HeartIcon className="h-5 w-5" />
-                          )}
-                          <span className="text-sm">Like</span>
-                        </button>
-
-                        <button
-                          onClick={() => toggleBookmark(articleId)}
-                          className={`flex items-center space-x-1 ${
-                            isBookmarked ? 'text-blue-600' : 'text-gray-400 hover:text-blue-600'
-                          }`}
-                        >
-                          {isBookmarked ? (
-                            <BookmarkSolidIcon className="h-5 w-5" />
-                          ) : (
-                            <BookmarkIcon className="h-5 w-5" />
-                          )}
-                          <span className="text-sm">Save</span>
-                        </button>
-
-                        <button
-                          onClick={() => shareArticle(article)}
-                          className="flex items-center space-x-1 text-gray-400 hover:text-green-600"
-                        >
-                          <ShareIcon className="h-5 w-5" />
-                          <span className="text-sm">Share</span>
-                        </button>
-                      </div>
+                    <div className="flex items-center space-x-2 ml-4">
+                      <button
+                        onClick={() => toggleBookmark(articleId)}
+                        className={`p-2 rounded-lg transition-colors ${
+                          isBookmarked ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400 hover:bg-blue-50 hover:text-blue-600'
+                        }`}
+                        title="Bookmark"
+                      >
+                        {isBookmarked ? (
+                          <BookmarkSolidIcon className="h-5 w-5" />
+                        ) : (
+                          <BookmarkIcon className="h-5 w-5" />
+                        )}
+                      </button>
 
                       <a
                         href={article.url || '#'}
@@ -465,7 +430,7 @@ function HealthNews() {
                         rel="noopener noreferrer"
                         className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
                       >
-                        Read More
+                        Read
                       </a>
                     </div>
                   </div>
