@@ -1,12 +1,149 @@
 /**
  * News Controller
- * Handles health news and alerts
+ * Handles health news from trusted sources (WHO, CDC, PubMed)
  */
 
 const { validationResult } = require('express-validator');
+const axios = require('axios');
+const xml2js = require('xml2js');
 
 /**
- * Get health news articles
+ * Fetch news from WHO RSS feeds
+ */
+const fetchWHONews = async () => {
+  try {
+    const feeds = [
+      'https://www.who.int/feeds/entity/mediacentre/news/en/rss.xml',
+      'https://www.who.int/feeds/entity/csr/don/en/rss.xml'
+    ];
+    
+    const allArticles = [];
+    
+    for (const feedUrl of feeds) {
+      try {
+        const response = await axios.get(feedUrl, { timeout: 8000 });
+        const parser = new xml2js.Parser();
+        const result = await parser.parseStringPromise(response.data);
+        
+        if (result.rss && result.rss.channel && result.rss.channel[0].item) {
+          const articles = result.rss.channel[0].item.slice(0, 15).map((item, index) => ({
+            id: `who-${Date.now()}-${index}`,
+            title: item.title[0],
+            summary: item.description ? item.description[0].replace(/<[^>]*>/g, '').substring(0, 200) + '...' : '',
+            url: item.link[0],
+            source: 'WHO',
+            author: 'World Health Organization',
+            publishedAt: new Date(item.pubDate[0]),
+            tags: ['WHO', 'Global Health', 'Public Health'],
+            category: 'health'
+          }));
+          allArticles.push(...articles);
+        }
+      } catch (err) {
+        console.warn('WHO feed error:', err.message);
+      }
+    }
+    
+    return allArticles;
+  } catch (error) {
+    console.error('WHO fetch error:', error);
+    return [];
+  }
+};
+
+/**
+ * Fetch news from CDC API
+ */
+const fetchCDCNews = async () => {
+  try {
+    const response = await axios.get('https://tools.cdc.gov/api/v2/resources/media', {
+      timeout: 8000,
+      params: {
+        max: 20,
+        sort: 'date desc'
+      }
+    });
+    
+    if (response.data && response.data.results) {
+      return response.data.results.slice(0, 15).map((item, index) => ({
+        id: `cdc-${Date.now()}-${index}`,
+        title: item.name || item.title,
+        summary: item.description ? item.description.substring(0, 200) + '...' : '',
+        url: item.sourceUrl || item.url,
+        source: 'CDC',
+        author: 'Centers for Disease Control and Prevention',
+        publishedAt: new Date(item.datePublished || item.publishDate),
+        tags: ['CDC', 'Disease Control', 'Prevention'],
+        category: 'health'
+      }));
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('CDC fetch error:', error);
+    return [];
+  }
+};
+
+/**
+ * Fetch research from PubMed
+ */
+const fetchPubMedNews = async () => {
+  try {
+    // Search for recent health articles
+    const searchResponse = await axios.get('https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi', {
+      timeout: 8000,
+      params: {
+        db: 'pubmed',
+        term: 'health[Title] AND ("last 30 days"[PDat])',
+        retmax: 15,
+        retmode: 'json',
+        sort: 'pub_date'
+      }
+    });
+    
+    if (searchResponse.data.esearchresult && searchResponse.data.esearchresult.idlist) {
+      const ids = searchResponse.data.esearchresult.idlist;
+      
+      if (ids.length > 0) {
+        // Fetch summaries
+        const summaryResponse = await axios.get('https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi', {
+          timeout: 8000,
+          params: {
+            db: 'pubmed',
+            id: ids.join(','),
+            retmode: 'json'
+          }
+        });
+        
+        if (summaryResponse.data.result) {
+          return ids.map((id, index) => {
+            const article = summaryResponse.data.result[id];
+            return {
+              id: `pubmed-${id}`,
+              title: article.title || 'Research Article',
+              summary: article.title ? article.title.substring(0, 200) + '...' : 'Medical research article',
+              url: `https://pubmed.ncbi.nlm.nih.gov/${id}/`,
+              source: 'PubMed',
+              author: article.authors && article.authors[0] ? article.authors[0].name : 'Medical Researchers',
+              publishedAt: new Date(article.pubdate || Date.now()),
+              tags: ['PubMed', 'Research', 'Medical Study'],
+              category: 'research'
+            };
+          });
+        }
+      }
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('PubMed fetch error:', error);
+    return [];
+  }
+};
+
+/**
+ * Get health news articles from trusted sources
  */
 exports.getNews = async (req, res) => {
   try {
@@ -21,65 +158,42 @@ exports.getNews = async (req, res) => {
 
     const { category, page = 1, limit = 20 } = req.query;
 
-    // Mock news data - in real system would fetch from news API or database
-    const mockNews = [
-      {
-        id: '1',
-        title: 'New Breakthrough in Diabetes Treatment',
-        summary: 'Researchers discover promising new approach to managing Type 2 diabetes...',
-        content: 'Full article content here...',
-        category: 'diabetes',
-        author: 'Medical News Team',
-        publishedAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-        imageUrl: 'https://example.com/diabetes-news.jpg',
-        source: 'Medical Journal',
-        tags: ['diabetes', 'treatment', 'research']
-      },
-      {
-        id: '2',
-        title: 'Heart Health Guidelines Updated for 2024',
-        summary: 'American Heart Association releases new recommendations...',
-        content: 'Full article content here...',
-        category: 'cardiology',
-        author: 'Dr. Sarah Johnson',
-        publishedAt: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
-        imageUrl: 'https://example.com/heart-health.jpg',
-        source: 'American Heart Association',
-        tags: ['heart', 'guidelines', 'prevention']
-      },
-      {
-        id: '3',
-        title: 'Mental Health Apps Show Promise in Clinical Trials',
-        summary: 'Digital therapeutics demonstrate effectiveness in treating anxiety and depression...',
-        content: 'Full article content here...',
-        category: 'mental_health',
-        author: 'Tech Health Reporter',
-        publishedAt: new Date(Date.now() - 6 * 60 * 60 * 1000), // 6 hours ago
-        imageUrl: 'https://example.com/mental-health-apps.jpg',
-        source: 'Digital Health Today',
-        tags: ['mental health', 'apps', 'digital therapeutics']
-      }
-    ];
+    console.log('📰 Fetching news from WHO, CDC, and PubMed...');
+    
+    // Fetch from all sources in parallel
+    const [whoArticles, cdcArticles, pubmedArticles] = await Promise.all([
+      fetchWHONews(),
+      fetchCDCNews(),
+      fetchPubMedNews()
+    ]);
+
+    // Combine and sort by date
+    let allArticles = [
+      ...whoArticles,
+      ...cdcArticles,
+      ...pubmedArticles
+    ].sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
+
+    console.log(`✅ Fetched ${allArticles.length} articles (WHO: ${whoArticles.length}, CDC: ${cdcArticles.length}, PubMed: ${pubmedArticles.length})`);
 
     // Filter by category if provided
-    let filteredNews = mockNews;
-    if (category) {
-      filteredNews = mockNews.filter(article => article.category === category);
+    if (category && category !== 'all') {
+      allArticles = allArticles.filter(article => article.category === category);
     }
 
-    // Simulate pagination
+    // Paginate
     const startIndex = (page - 1) * limit;
-    const paginatedNews = filteredNews.slice(startIndex, startIndex + parseInt(limit));
+    const paginatedArticles = allArticles.slice(startIndex, startIndex + parseInt(limit));
 
     res.json({
       success: true,
       data: {
-        articles: paginatedNews,
+        articles: paginatedArticles,
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),
-          total: filteredNews.length,
-          pages: Math.ceil(filteredNews.length / limit)
+          total: allArticles.length,
+          pages: Math.ceil(allArticles.length / limit)
         },
         lastUpdated: new Date()
       }
