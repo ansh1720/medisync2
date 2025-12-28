@@ -9,10 +9,10 @@ const API_BASE_URL = import.meta.env.VITE_API_URL ||
 
 console.log('🔗 API Base URL:', API_BASE_URL);
 
-// Create axios instance
+// Create axios instance with longer timeout for Render free tier cold starts
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 60000, // 60 seconds to handle Render cold starts
 });
 
 // Request interceptor to add auth token
@@ -47,9 +47,15 @@ api.interceptors.response.use(
   }
 );
 
-// Auth API functions
+// Auth API functions with better UX for slow backends
 export const authAPI = {
-  login: (credentials) => api.post('/auth/login', credentials),
+  login: async (credentials) => {
+    // Show loading message for potential cold start
+    if (API_BASE_URL.includes('render.com')) {
+      console.log('🔄 Connecting to server (this may take up to 60 seconds if the server is waking up)...');
+    }
+    return api.post('/auth/login', credentials);
+  },
   register: (userData) => api.post('/auth/register', userData),
   getProfile: () => api.get('/auth/profile'),
   updateProfile: (data) => api.put('/auth/profile', data),
