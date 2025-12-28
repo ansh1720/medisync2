@@ -51,16 +51,16 @@ function Dashboard() {
   const [isSearching, setIsSearching] = useState(false);
   
   const [healthMetrics, setHealthMetrics] = useState({
-    riskScore: 15,
-    lastAssessment: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-    bpTrend: 'improving',
-    lastBpReading: { systolic: 125, diastolic: 80, date: new Date(Date.now() - 24 * 60 * 60 * 1000) },
-    weeklyActivity: 4,
-    upcomingAppointments: 2,
-    medicationAdherence: 85,
+    riskScore: 0,
+    lastAssessment: null,
+    bpTrend: null,
+    lastBpReading: null,
+    weeklyActivity: 0,
+    upcomingAppointments: 0,
+    medicationAdherence: 0,
     healthGoals: {
-      completed: 3,
-      total: 5
+      completed: 0,
+      total: 0
     }
   });
 
@@ -135,30 +135,8 @@ function Dashboard() {
     }
   ]);
 
-  // Mock health recommendations
-  const [recommendations] = useState([
-    {
-      type: 'exercise',
-      title: 'Increase Physical Activity',
-      description: 'Try to get 150 minutes of moderate exercise per week.',
-      priority: 'medium',
-      action: 'Log Exercise'
-    },
-    {
-      type: 'medication',
-      title: 'Medication Reminder',
-      description: 'Remember to take your morning medications.',
-      priority: 'high',
-      action: 'Mark Taken'
-    },
-    {
-      type: 'checkup',
-      title: 'Schedule Checkup',
-      description: 'Your last checkup was 6 months ago.',
-      priority: 'medium',
-      action: 'Book Now'
-    }
-  ]);
+  // Health recommendations (empty by default for new users)
+  const [recommendations] = useState([]);
 
   // Mock search suggestions data
   const mockSearchSuggestions = [
@@ -196,54 +174,6 @@ function Dashboard() {
           totalConsultations: consultations.total || 0,
           pendingPrescriptions: consultations.pendingPrescriptions || 0,
           favouriteDoctors: consultations.favouriteDoctors || []
-        });
-      } else {
-        // Mock consultation data
-        setConsultationData({
-          upcomingConsultations: [
-            {
-              id: 1,
-              doctorName: 'Dr. Rajesh Kumar',
-              specialty: 'Cardiology',
-              date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
-              time: '10:30 AM',
-              type: 'video',
-              reason: 'Follow-up consultation'
-            },
-            {
-              id: 2,
-              doctorName: 'Dr. Priya Sharma',
-              specialty: 'General Medicine',
-              date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
-              time: '2:00 PM',
-              type: 'chat',
-              reason: 'Prescription renewal'
-            }
-          ],
-          recentConsultations: [
-            {
-              id: 3,
-              doctorName: 'Dr. Vikram Singh',
-              specialty: 'Dermatology',
-              date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-              diagnosis: 'Mild eczema',
-              rating: 5
-            },
-            {
-              id: 4,
-              doctorName: 'Dr. Anjali Mehta',
-              specialty: 'Pediatrics',
-              date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-              diagnosis: 'Annual checkup - all normal',
-              rating: 4
-            }
-          ],
-          totalConsultations: 12,
-          pendingPrescriptions: 1,
-          favouriteDoctors: [
-            { name: 'Dr. Rajesh Kumar', specialty: 'Cardiology', rating: 4.9 },
-            { name: 'Dr. Vikram Singh', specialty: 'Dermatology', rating: 4.8 }
-          ]
         });
       }
     } catch (error) {
