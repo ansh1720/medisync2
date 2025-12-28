@@ -134,6 +134,7 @@ function HealthNews() {
       {
         id: 'who-1',
         title: 'WHO Declares Global Health Emergency Preparedness Framework',
+        content: 'The World Health Organization has announced a comprehensive global health emergency preparedness framework aimed at strengthening the world\'s ability to prevent, detect, and respond to health emergencies. The framework emphasizes international cooperation, early warning systems, and rapid response capabilities. It includes provisions for equitable access to medical countermeasures, improved surveillance systems, and enhanced coordination between nations during health crises. The initiative builds on lessons learned from recent global health challenges and aims to create a more resilient global health security architecture.',
         url: 'https://www.who.int/news',
         source: 'WHO',
         publishedAt: new Date(now - 2 * 60 * 60 * 1000)
@@ -141,6 +142,7 @@ function HealthNews() {
       {
         id: 'cdc-1',
         title: 'CDC Updates Immunization Guidelines for 2025',
+        content: 'The Centers for Disease Control and Prevention has released updated immunization guidelines for 2025, reflecting the latest scientific evidence and recommendations for vaccine schedules across all age groups. The new guidelines include updated recommendations for routine childhood vaccinations, adult immunizations, and special considerations for immunocompromised individuals. Key updates include revised timing for certain vaccines, new combination vaccines to reduce the number of shots, and expanded recommendations for influenza and pneumococcal vaccines. Healthcare providers are encouraged to review the updated schedules to ensure optimal protection for their patients.',
         url: 'https://www.cdc.gov/vaccines',
         source: 'CDC',
         publishedAt: new Date(now - 5 * 60 * 60 * 1000)
@@ -148,6 +150,7 @@ function HealthNews() {
       {
         id: 'pubmed-1',
         title: 'Breakthrough Cancer Immunotherapy Shows 40% Improvement in Trials',
+        content: 'A groundbreaking clinical trial has demonstrated a 40% improvement in treatment outcomes using a novel cancer immunotherapy approach. The study, published in a leading medical journal, followed patients with advanced solid tumors who received the new treatment combining checkpoint inhibitors with personalized cancer vaccines. Results showed significant tumor reduction in a majority of patients, with manageable side effects. The therapy works by training the patient\'s immune system to recognize and attack cancer cells more effectively. Researchers are now planning larger Phase III trials to confirm these promising results across multiple cancer types.',
         url: 'https://pubmed.ncbi.nlm.nih.gov',
         source: 'PubMed',
         publishedAt: new Date(now - 8 * 60 * 60 * 1000)
@@ -155,6 +158,7 @@ function HealthNews() {
       {
         id: 'who-2',
         title: 'Global Malaria Vaccine Rollout Reduces Cases by 40% in Children',
+        content: 'The World Health Organization reports that the global rollout of the RTS,S/AS01 malaria vaccine has led to a 40% reduction in severe malaria cases among children in pilot implementation countries. The vaccine, recommended for children in regions with moderate to high malaria transmission, has been administered to over 2 million children across Ghana, Kenya, and Malawi. The program has demonstrated not only the vaccine\'s effectiveness but also its feasibility for large-scale implementation. WHO emphasizes that the vaccine should be used alongside other malaria prevention measures such as insecticide-treated bed nets and antimalarial medications.',
         url: 'https://www.who.int/malaria',
         source: 'WHO',
         publishedAt: new Date(now - 12 * 60 * 60 * 1000)
@@ -162,6 +166,7 @@ function HealthNews() {
       {
         id: 'cdc-2',
         title: 'Antibiotic Resistance: CDC Issues New Stewardship Guidelines',
+        content: 'The CDC has released comprehensive new antibiotic stewardship guidelines to combat the growing threat of antimicrobial resistance. The guidelines provide healthcare facilities with evidence-based strategies to optimize antibiotic use, including improved diagnostic testing, treatment duration recommendations, and infection prevention measures. Healthcare providers are urged to prescribe antibiotics only when necessary, choose appropriate agents and dosages, and reassess treatment after 48-72 hours. The initiative aims to reduce unnecessary antibiotic use by 30% over the next five years while maintaining quality patient care.',
         url: 'https://www.cdc.gov/antibiotic-use',
         source: 'CDC',
         publishedAt: new Date(now - 18 * 60 * 60 * 1000)
@@ -169,6 +174,7 @@ function HealthNews() {
       {
         id: 'pubmed-2',
         title: 'CRISPR Gene Therapy Achieves 90% Success Rate in Sickle Cell Treatment',
+        content: 'A revolutionary CRISPR-based gene therapy has achieved a remarkable 90% success rate in treating sickle cell disease in clinical trials. The therapy works by editing the patient\'s own stem cells to produce healthy hemoglobin, effectively curing the genetic disorder. Patients who received the treatment showed sustained improvement with no severe sickle cell-related complications after two years of follow-up. The one-time treatment eliminates the need for lifelong blood transfusions and significantly improves quality of life. Regulatory approval is expected within the next year, marking a major milestone in genetic medicine.',
         url: 'https://www.nih.gov/news',
         source: 'NIH',
         publishedAt: new Date(now - 24 * 60 * 60 * 1000)
@@ -176,6 +182,7 @@ function HealthNews() {
       {
         id: 'who-3',
         title: 'WHO Reports Tuberculosis Cases at All-Time Low Following New Treatment',
+        content: 'The World Health Organization announces that global tuberculosis cases have reached an all-time low, thanks to new shorter and more effective treatment regimens. The new treatment protocols reduce the treatment duration from 6-9 months to just 4 months for drug-susceptible TB, improving patient compliance and outcomes. Advanced diagnostic tools have also enabled earlier detection and treatment initiation. Despite this progress, WHO emphasizes the need for continued vigilance, particularly in addressing drug-resistant TB strains and ensuring treatment access in high-burden countries.',
         url: 'https://www.who.int/tb',
         source: 'WHO',
         publishedAt: new Date(now - 30 * 60 * 60 * 1000)
@@ -183,6 +190,7 @@ function HealthNews() {
       {
         id: 'cdc-3',
         title: 'Seasonal Flu Activity Remains Low, Vaccination Urged',
+        content: 'The CDC reports that seasonal influenza activity remains at historically low levels this season, but urges the public not to become complacent about vaccination. While social distancing and mask-wearing during previous health concerns may have contributed to reduced flu transmission, experts warn that flu activity could surge as these measures relax. The flu vaccine has been updated to match the circulating strains and is recommended for everyone 6 months and older. Vaccination is especially important for high-risk groups including young children, elderly adults, pregnant women, and those with chronic health conditions.',
         url: 'https://www.cdc.gov/flu',
         source: 'CDC',
         publishedAt: new Date(now - 36 * 60 * 60 * 1000)
@@ -190,6 +198,7 @@ function HealthNews() {
       {
         id: 'pubmed-3',
         title: 'Mediterranean Diet Linked to 30% Lower Cardiovascular Risk',
+        content: 'A comprehensive meta-analysis of over 50 studies confirms that adherence to a Mediterranean diet is associated with a 30% reduction in cardiovascular disease risk. The diet, rich in fruits, vegetables, whole grains, legumes, nuts, and olive oil, with moderate fish consumption and limited red meat, shows consistent benefits across diverse populations. Researchers found improvements in blood pressure, cholesterol levels, blood sugar control, and inflammation markers. The study reinforces dietary recommendations emphasizing plant-based foods and healthy fats as a cornerstone of heart disease prevention.',
         url: 'https://www.hsph.harvard.edu',
         source: 'Harvard Health',
         publishedAt: new Date(now - 42 * 60 * 60 * 1000)
@@ -197,6 +206,7 @@ function HealthNews() {
       {
         id: 'fda-1',
         title: 'FDA Approves First AI-Powered Diagnostic Tool for Lung Cancer',
+        content: 'The FDA has granted approval for the first artificial intelligence-powered diagnostic tool designed to detect lung cancer from CT scans. The AI system demonstrates accuracy comparable to experienced radiologists and can identify suspicious nodules in seconds, potentially reducing diagnosis time from days to minutes. The technology uses deep learning algorithms trained on millions of imaging studies to recognize patterns indicative of malignancy. Healthcare providers can use the tool as a decision support system to improve early detection rates and reduce false positives, ultimately improving patient outcomes through earlier intervention.',
         url: 'https://www.fda.gov',
         source: 'FDA',
         publishedAt: new Date(now - 48 * 60 * 60 * 1000)
