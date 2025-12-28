@@ -15,7 +15,6 @@ function Navbar() {
       { name: 'Risk Assessment', href: '/risk-assessment' },
       { name: 'Consultation', href: '/consultations' },
       { name: 'Hospitals', href: '/hospitals' },
-      { name: 'Health News', href: '/news' },
     ];
 
     // Add role-specific navigation items
