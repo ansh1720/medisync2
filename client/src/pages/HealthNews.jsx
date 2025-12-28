@@ -34,6 +34,8 @@ function HealthNews() {
   const [likedArticles, setLikedArticles] = useState(new Set());
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [newsSource, setNewsSource] = useState('Loading...');
+  const [selectedArticle, setSelectedArticle] = useState(null);
+  const [showArticleModal, setShowArticleModal] = useState(false);
   
   const observerRef = useRef();
   const searchTimeoutRef = useRef();
@@ -208,6 +210,16 @@ function HealthNews() {
         toast.error('Failed to share article');
       });
     }
+  };
+
+  const openArticle = (article) => {
+    setSelectedArticle(article);
+    setShowArticleModal(true);
+  };
+
+  const closeArticleModal = () => {
+    setShowArticleModal(false);
+    setTimeout(() => setSelectedArticle(null), 300);
   };
 
   const scrollToTop = () => {
@@ -424,14 +436,12 @@ function HealthNews() {
                         )}
                       </button>
 
-                      <a
-                        href={article.url || '#'}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        onClick={() => openArticle(article)}
                         className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
                       >
                         Read
-                      </a>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -491,6 +501,118 @@ function HealthNews() {
         >
           <ArrowUpIcon className="h-6 w-6" />
         </button>
+      )}
+
+      {/* Article Modal */}
+      {showArticleModal && selectedArticle && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <NewspaperIcon className="h-6 w-6 text-blue-600" />
+                <div>
+                  <p className="text-sm font-medium text-gray-900">{selectedArticle.source}</p>
+                  <p className="text-xs text-gray-500">{formatDate(selectedArticle.publishedAt)}</p>
+                </div>
+              </div>
+              <button
+                onClick={closeArticleModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="px-6 py-6">
+              {/* Title */}
+              <h1 className="text-3xl font-bold text-gray-900 mb-4">
+                {selectedArticle.title}
+              </h1>
+
+              {/* Meta Info */}
+              <div className="flex items-center flex-wrap gap-3 text-sm text-gray-600 mb-6 pb-6 border-b border-gray-200">
+                <span className="font-medium">{selectedArticle.author}</span>
+                {selectedArticle.author && <span>•</span>}
+                <span>{formatDate(selectedArticle.publishedAt)}</span>
+              </div>
+
+              {/* Tags */}
+              {selectedArticle.tags && selectedArticle.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {selectedArticle.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-3 py-1 bg-blue-50 text-blue-700 text-sm rounded-full"
+                    >
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Summary */}
+              <div className="mb-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-3">Summary</h2>
+                <p className="text-gray-700 leading-relaxed">
+                  {selectedArticle.summary || selectedArticle.description || 'No summary available.'}
+                </p>
+              </div>
+
+              {/* Full Content */}
+              {selectedArticle.content && (
+                <div className="mb-6">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-3">Full Article</h2>
+                  <div className="prose max-w-none text-gray-700 leading-relaxed">
+                    {selectedArticle.content}
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex items-center justify-between pt-6 border-t border-gray-200">
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={() => toggleBookmark(selectedArticle.id || selectedArticle._id)}
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                      bookmarkedArticles.has(selectedArticle.id || selectedArticle._id)
+                        ? 'bg-blue-100 text-blue-600'
+                        : 'bg-gray-100 text-gray-700 hover:bg-blue-50'
+                    }`}
+                  >
+                    {bookmarkedArticles.has(selectedArticle.id || selectedArticle._id) ? (
+                      <BookmarkSolidIcon className="h-5 w-5" />
+                    ) : (
+                      <BookmarkIcon className="h-5 w-5" />
+                    )}
+                    <span className="text-sm font-medium">Bookmark</span>
+                  </button>
+
+                  <button
+                    onClick={() => shareArticle(selectedArticle)}
+                    className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    <ShareIcon className="h-5 w-5" />
+                    <span className="text-sm font-medium">Share</span>
+                  </button>
+                </div>
+
+                <a
+                  href={selectedArticle.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <GlobeAltIcon className="h-5 w-5" />
+                  <span className="text-sm font-medium">View Original</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
