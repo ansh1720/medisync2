@@ -7,6 +7,13 @@ const { validationResult } = require('express-validator');
 const axios = require('axios');
 const xml2js = require('xml2js');
 
+// Cache for news articles
+let newsCache = {
+  articles: [],
+  lastFetch: null,
+  cacheDuration: 10 * 60 * 1000 // 10 minutes
+};
+
 /**
  * Fetch news from WHO RSS feeds
  */
@@ -157,24 +164,38 @@ exports.getNews = async (req, res) => {
     }
 
     const { category, page = 1, limit = 20 } = req.query;
+    const now = Date.now();
 
-    console.log('📰 Fetching news from WHO, CDC, and PubMed...');
-    
-    // Fetch from all sources in parallel
-    const [whoArticles, cdcArticles, pubmedArticles] = await Promise.all([
-      fetchWHONews(),
-      fetchCDCNews(),
-      fetchPubMedNews()
-    ]);
+    // Check if cache is valid
+    const isCacheValid = newsCache.lastFetch && (now - newsCache.lastFetch) < newsCache.cacheDuration;
 
-    // Combine and sort by date
-    let allArticles = [
-      ...whoArticles,
-      ...cdcArticles,
-      ...pubmedArticles
-    ].sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
+    // Fetch fresh news if cache is invalid or empty
+    if (!isCacheValid || newsCache.articles.length === 0) {
+      console.log('📰 Fetching fresh news from WHO, CDC, and PubMed...');
+      
+      // Fetch from all sources in parallel
+      const [whoArticles, cdcArticles, pubmedArticles] = await Promise.all([
+        fetchWHONews(),
+        fetchCDCNews(),
+        fetchPubMedNews()
+      ]);
 
-    console.log(`✅ Fetched ${allArticles.length} articles (WHO: ${whoArticles.length}, CDC: ${cdcArticles.length}, PubMed: ${pubmedArticles.length})`);
+      // Combine and sort by date (newest first)
+      newsCache.articles = [
+        ...whoArticles,
+        ...cdcArticles,
+        ...pubmedArticles
+      ].sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
+
+      newsCache.lastFetch = now;
+
+      console.log(`✅ Fetched ${newsCache.articles.length} articles (WHO: ${whoArticles.length}, CDC: ${cdcArticles.length}, PubMed: ${pubmedArticles.length})`);
+    } else {
+      console.log(`📦 Using cached news (${newsCache.articles.length} articles, age: ${Math.round((now - newsCache.lastFetch) / 1000)}s)`);
+    }
+
+    // Get articles from cache
+    let allArticles = [...newsCache.articles];
 
     // Filter by category if provided
     if (category && category !== 'all') {
@@ -182,20 +203,25 @@ exports.getNews = async (req, res) => {
     }
 
     // Paginate
-    const startIndex = (page - 1) * limit;
-    const paginatedArticles = allArticles.slice(startIndex, startIndex + parseInt(limit));
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const startIndex = (pageNum - 1) * limitNum;
+    const endIndex = startIndex + limitNum;
+    const paginatedArticles = allArticles.slice(startIndex, endIndex);
+    const hasMore = endIndex < allArticles.length;
 
     res.json({
       success: true,
       data: {
         articles: paginatedArticles,
         pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
+          page: pageNum,
+          limit: limitNum,
           total: allArticles.length,
-          pages: Math.ceil(allArticles.length / limit)
+          pages: Math.ceil(allArticles.length / limitNum),
+          hasMore
         },
-        lastUpdated: new Date()
+        lastUpdated: new Date(newsCache.lastFetch)
       }
     });
 
