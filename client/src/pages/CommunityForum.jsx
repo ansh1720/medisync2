@@ -29,7 +29,65 @@ const CATEGORIES = [
 ];
 
 function CommunityForum() {
-  const [posts, setPosts] = useState([]);
+  const mockPosts = [
+    {
+      _id: 'mock-1',
+      title: 'Tips for Managing Diabetes',
+      body: 'Looking for advice on managing blood sugar levels naturally. What has worked for you?',
+      category: 'chronic_conditions',
+      tags: ['diabetes', 'blood sugar', 'diet'],
+      userId: { name: 'John Doe' },
+      stats: { likes: 12, comments: 5, views: 45 },
+      isLiked: false,
+      createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000)
+    },
+    {
+      _id: 'mock-2',
+      title: 'Best exercises for weight loss?',
+      body: 'Starting my fitness journey and would love to hear about effective exercises that helped you lose weight.',
+      category: 'fitness',
+      tags: ['exercise', 'weight loss', 'fitness'],
+      userId: { name: 'Sarah Smith' },
+      stats: { likes: 8, comments: 12, views: 67 },
+      isLiked: false,
+      createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000)
+    },
+    {
+      _id: 'mock-3',
+      title: 'Dealing with anxiety and stress',
+      body: 'How do you cope with daily anxiety? Looking for healthy coping mechanisms.',
+      category: 'mental_health',
+      tags: ['anxiety', 'stress', 'mental health'],
+      userId: { name: 'Mike Johnson' },
+      stats: { likes: 15, comments: 8, views: 89 },
+      isLiked: false,
+      createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000)
+    },
+    {
+      _id: 'mock-4',
+      title: 'Healthy meal prep ideas',
+      body: 'Share your favorite healthy meal prep recipes for the week!',
+      category: 'nutrition',
+      tags: ['nutrition', 'meal prep', 'healthy eating'],
+      userId: { name: 'Emily Davis' },
+      stats: { likes: 20, comments: 15, views: 123 },
+      isLiked: false,
+      createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000)
+    },
+    {
+      _id: 'mock-5',
+      title: 'Managing high blood pressure naturally',
+      body: 'What lifestyle changes have helped you control hypertension without medication?',
+      category: 'chronic_conditions',
+      tags: ['hypertension', 'blood pressure', 'lifestyle'],
+      userId: { name: 'Robert Wilson' },
+      stats: { likes: 10, comments: 7, views: 56 },
+      isLiked: false,
+      createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000)
+    }
+  ];
+
+  const [posts, setPosts] = useState(mockPosts);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');

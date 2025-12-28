@@ -70,12 +70,12 @@ function Dashboard() {
 
   const getColorClasses = (color) => {
     const colors = {
-      blue: 'bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-600',
-      red: 'bg-red-50 hover:bg-red-100 border-red-200 text-red-600',
-      green: 'bg-green-50 hover:bg-green-100 border-green-200 text-green-600',
-      purple: 'bg-purple-50 hover:bg-purple-100 border-purple-200 text-purple-600',
-      indigo: 'bg-indigo-50 hover:bg-indigo-100 border-indigo-200 text-indigo-600',
-      pink: 'bg-pink-50 hover:bg-pink-100 border-pink-200 text-pink-600'
+      blue: 'text-blue-600',
+      red: 'text-red-600',
+      green: 'text-green-600',
+      purple: 'text-purple-600',
+      indigo: 'text-indigo-600',
+      pink: 'text-pink-600'
     };
     return colors[color] || colors.blue;
   };
@@ -129,17 +129,17 @@ function Dashboard() {
                 <button
                   key={index}
                   onClick={() => navigate(feature.path)}
-                  className={`p-6 rounded-xl border-2 transition-all duration-200 text-left ${getColorClasses(feature.color)}`}
+                  className="p-6 rounded-xl border-2 border-gray-200 bg-white hover:shadow-lg transition-all duration-200 text-left"
                 >
                   <div className="flex items-start space-x-4">
                     <div className="flex-shrink-0">
-                      <Icon className="h-8 w-8" />
+                      <Icon className={`h-8 w-8 ${getColorClasses(feature.color)}`} />
                     </div>
                     <div className="flex-1">
-                      <h3 className="text-lg font-semibold mb-1">
+                      <h3 className="text-lg font-semibold mb-1 text-gray-900">
                         {feature.title}
                       </h3>
-                      <p className="text-sm opacity-75">
+                      <p className="text-sm text-gray-600">
                         {feature.description}
                       </p>
                     </div>
