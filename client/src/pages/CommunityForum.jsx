@@ -45,7 +45,7 @@ function CommunityForum() {
       {
         _id: 'fallback-2',
         title: 'Best exercises for weight loss?',
-        category: 'exercise',
+        category: 'fitness',
         tags: ['exercise', 'weight loss', 'fitness'],
         userId: { name: 'Sarah Smith' },
         stats: { likes: 8, comments: 12, views: 67 },
@@ -141,18 +141,52 @@ function CommunityForum() {
       
       console.log('Setting posts data:', postsData);
       
-      // Use fallback posts if no posts returned from API
-      if (postsData.length === 0 && selectedCategory === 'all' && !searchQuery.trim()) {
-        postsData = getFallbackPosts();
+      // Always merge API posts with fallback posts to ensure visibility
+      const allFallbackPosts = getFallbackPosts();
+      let fallbackToShow = allFallbackPosts;
+      
+      if (selectedCategory !== 'all') {
+        // Filter fallback posts by category
+        fallbackToShow = allFallbackPosts.filter(post => post.category === selectedCategory);
       }
       
-      setPosts(postsData);
+      if (searchQuery.trim()) {
+        // Filter fallback posts by search query
+        const query = searchQuery.toLowerCase();
+        fallbackToShow = fallbackToShow.filter(post => 
+          post.title.toLowerCase().includes(query) ||
+          post.tags.some(tag => tag.toLowerCase().includes(query))
+        );
+      }
+      
+      // Merge API posts with fallback posts (API posts first, then fallback)
+      // Remove duplicates by checking IDs
+      const apiPostIds = new Set(postsData.map(p => p._id));
+      const uniqueFallbackPosts = fallbackToShow.filter(fp => !apiPostIds.has(fp._id));
+      const mergedPosts = [...postsData, ...uniqueFallbackPosts];
+      
+      setPosts(mergedPosts);
       
     } catch (error) {
       console.error('Error fetching posts:', error);
       toast.error(error.response?.data?.message || 'Failed to load posts');
-      // Show fallback posts on error
-      setPosts(getFallbackPosts());
+      // Show fallback posts on error, with category and search filtering
+      const allFallbackPosts = getFallbackPosts();
+      let fallbackToShow = allFallbackPosts;
+      
+      if (selectedCategory !== 'all') {
+        fallbackToShow = allFallbackPosts.filter(post => post.category === selectedCategory);
+      }
+      
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        fallbackToShow = fallbackToShow.filter(post => 
+          post.title.toLowerCase().includes(query) ||
+          post.tags.some(tag => tag.toLowerCase().includes(query))
+        );
+      }
+      
+      setPosts(fallbackToShow);
     } finally {
       setIsLoading(false);
     }
