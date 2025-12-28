@@ -14,6 +14,7 @@ import EquipmentReadings from './pages/EquipmentReadings';
 import HospitalLocator from './pages/HospitalLocator';
 import DoctorConsultation from './pages/DoctorConsultation';
 import CommunityForum from './pages/CommunityForum';
+import HealthNews from './pages/HealthNews';
 import UserProfile from './pages/UserProfile';
 import DiseaseDetails from './pages/DiseaseDetails';
 import EnhancedDiseaseSearch from './pages/EnhancedDiseaseSearch';
@@ -135,6 +136,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <CommunityForum />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/news"
+              element={
+                <ProtectedRoute>
+                  <HealthNews />
                 </ProtectedRoute>
               }
             />
