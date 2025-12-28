@@ -149,8 +149,16 @@ function CommunityForum() {
       setNewPost({ title: '', content: '', category: 'general', tags: '' });
       setShowCreatePost(false);
       
-      // Refresh posts
-      fetchPosts();
+      // Add the new post to the beginning of the list immediately
+      if (response.data && response.data.data) {
+        const newPostData = response.data.data;
+        setPosts(prevPosts => [newPostData, ...prevPosts]);
+      }
+      
+      // Also refresh posts to ensure we have latest data
+      setTimeout(() => {
+        fetchPosts();
+      }, 500);
       
     } catch (error) {
       console.error('Create post error:', error);
