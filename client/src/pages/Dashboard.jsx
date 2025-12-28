@@ -64,7 +64,7 @@ function Dashboard() {
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate('/diseases', { state: { searchQuery: searchQuery.trim() } });
+      navigate('/diseases', { state: { initialSearch: searchQuery.trim() } });
     }
   };
 
