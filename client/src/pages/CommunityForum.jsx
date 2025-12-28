@@ -86,7 +86,16 @@ function CommunityForum() {
   };
 
   const [posts, setPosts] = useState([]);
-  const [userCreatedPosts, setUserCreatedPosts] = useState([]); // Track posts created by user
+  const [userCreatedPosts, setUserCreatedPosts] = useState(() => {
+    // Load user-created posts from localStorage on mount
+    try {
+      const saved = localStorage.getItem('userCreatedPosts');
+      return saved ? JSON.parse(saved) : [];
+    } catch (error) {
+      console.error('Error loading user posts from localStorage:', error);
+      return [];
+    }
+  }); // Track posts created by user
   const [isLoading, setIsLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -100,6 +109,15 @@ function CommunityForum() {
     tags: ''
   });
   const [isCreating, setIsCreating] = useState(false);
+
+  // Save user-created posts to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem('userCreatedPosts', JSON.stringify(userCreatedPosts));
+    } catch (error) {
+      console.error('Error saving user posts to localStorage:', error);
+    }
+  }, [userCreatedPosts]);
 
   // Load posts
   useEffect(() => {
