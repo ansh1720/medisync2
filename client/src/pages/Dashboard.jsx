@@ -1,203 +1,160 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { Link, useNavigate } from 'react-router-dom';
-import { consultationAPI } from '../utils/api';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
-  ChartBarIcon,
-  HeartIcon,
-  ArrowTrendingUpIcon,
-  ArrowTrendingDownIcon,
-  ExclamationTriangleIcon,
-  CheckCircleIcon,
-  CalendarDaysIcon,
-  ClockIcon,
-  UserGroupIcon,
-  BellIcon,
   MagnifyingGlassIcon,
-  SparklesIcon,
-  DocumentTextIcon,
+  HeartIcon,
+  BeakerIcon,
   ChatBubbleLeftRightIcon,
-  VideoCameraIcon,
-  PhoneIcon,
-  PlusIcon,
-  StarIcon
+  MapPinIcon,
+  NewspaperIcon,
+  UserGroupIcon,
+  CalendarDaysIcon
 } from '@heroicons/react/24/outline';
 import Navbar from '../components/Navbar';
-import { useInteraction } from '../context/InteractionContext';
-import {
-  QuickSearchWidget,
-  PersonalizedActionsWidget,
-  RecentHealthActivityWidget,
-  HealthInsightsWidget,
-  FeatureDiscoveryWidget
-} from '../components/DynamicWidgets';
-import toast from 'react-hot-toast';
 
 function Dashboard() {
-  const { user } = useAuth();
-  const { 
-    trackFeatureUsage, 
-    trackSearch, 
-    getDynamicDashboardLayout,
-    userInteractions,
-    clearRecentSearches
-  } = useInteraction();
   const navigate = useNavigate();
-  
-  // Search state
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchSuggestions, setSearchSuggestions] = useState([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
-  
-  const [healthMetrics, setHealthMetrics] = useState({
-    riskScore: 0,
-    lastAssessment: null,
-    bpTrend: null,
-    lastBpReading: null,
-    weeklyActivity: 0,
-    upcomingAppointments: 0,
-    medicationAdherence: 0,
-    healthGoals: {
-      completed: 0,
-      total: 0
-    }
-  });
 
-  // Patient consultation data
-  const [consultationData, setConsultationData] = useState({
-    upcomingConsultations: [],
-    recentConsultations: [],
-    totalConsultations: 0,
-    pendingPrescriptions: 0,
-    favouriteDoctors: []
-  });
-
-  const [quickActions, setQuickActions] = useState([
-    { 
-      title: 'Book Consultation', 
-      description: 'Find and book a doctor',
-      icon: CalendarDaysIcon,
+  const features = [
+    {
+      title: 'Disease Search',
+      description: 'Search diseases by symptoms',
+      icon: BeakerIcon,
       color: 'blue',
-      action: () => navigate('/consultations')
+      path: '/diseases'
     },
-    { 
-      title: 'Instant Consult', 
-      description: 'Connect with available doctor',
+    {
+      title: 'Risk Assessment',
+      description: 'Check your health risk',
+      icon: HeartIcon,
+      color: 'red',
+      path: '/risk-assessment'
+    },
+    {
+      title: 'Doctor Consultation',
+      description: 'Book appointments',
       icon: ChatBubbleLeftRightIcon,
       color: 'green',
-      action: () => handleInstantConsult()
+      path: '/consultations'
     },
-    { 
-      title: 'Health Records', 
-      description: 'View medical history',
-      icon: DocumentTextIcon,
+    {
+      title: 'Find Hospitals',
+      description: 'Locate nearby hospitals',
+      icon: MapPinIcon,
       color: 'purple',
-      action: () => navigate('/health-records')
+      path: '/hospitals'
     },
-    { 
-      title: 'Prescriptions', 
-      description: 'View and order medicines',
-      icon: PlusIcon,
-      color: 'orange',
-      action: () => navigate('/prescriptions')
+    {
+      title: 'Health News',
+      description: 'Latest health updates',
+      icon: NewspaperIcon,
+      color: 'indigo',
+      path: '/news'
+    },
+    {
+      title: 'Community Forum',
+      description: 'Connect with others',
+      icon: UserGroupIcon,
+      color: 'pink',
+      path: '/forum'
     }
-  ]);
-
-  const [recentActivity, setRecentActivity] = useState([
-    {
-      type: 'risk_assessment',
-      title: 'Completed Risk Assessment',
-      description: 'Overall risk score: Low (15%)',
-      time: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-      status: 'completed'
-    },
-    {
-      type: 'equipment_reading',
-      title: 'Blood Pressure Reading',
-      description: '125/80 mmHg - Normal',
-      time: new Date(Date.now() - 24 * 60 * 60 * 1000),
-      status: 'normal'
-    },
-    {
-      type: 'appointment',
-      title: 'Appointment Booked',
-      description: 'Dr. Smith - Cardiology',
-      time: new Date(Date.now() - 12 * 60 * 60 * 1000),
-      status: 'scheduled'
-    },
-    {
-      type: 'community',
-      title: 'Forum Post Reply',
-      description: 'Replied to "Managing diabetes"',
-      time: new Date(Date.now() - 6 * 60 * 60 * 1000),
-      status: 'completed'
-    }
-  ]);
-
-  // Health recommendations (empty by default for new users)
-  const [recommendations] = useState([]);
-
-  // Mock search suggestions data
-  const mockSearchSuggestions = [
-    { id: 1, type: 'symptom', text: 'fever', description: 'High body temperature' },
-    { id: 2, type: 'symptom', text: 'headache', description: 'Pain in head or neck' },
-    { id: 3, type: 'symptom', text: 'chest pain', description: 'Pain in chest area' },
-    { id: 4, type: 'symptom', text: 'shortness of breath', description: 'Difficulty breathing' },
-    { id: 5, type: 'disease', text: 'diabetes', description: 'Blood sugar management' },
-    { id: 6, type: 'disease', text: 'hypertension', description: 'High blood pressure' },
-    { id: 7, type: 'disease', text: 'asthma', description: 'Breathing disorder' },
-    { id: 8, type: 'disease', text: 'common cold', description: 'Viral infection' },
-    { id: 9, type: 'symptom', text: 'cough', description: 'Throat irritation' },
-    { id: 10, type: 'symptom', text: 'fatigue', description: 'Extreme tiredness' },
-    { id: 11, type: 'disease', text: 'migraine', description: 'Severe headache' },
-    { id: 12, type: 'symptom', text: 'nausea', description: 'Feeling sick' }
   ];
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
-
-  const loadDashboardData = async () => {
-    try {
-      // Load consultation data from API
-      const consultationsResponse = await consultationAPI.getConsultations().catch(err => {
-        console.log('Consultations API not available, using mock data');
-        return null;
-      });
-
-      if (consultationsResponse?.data?.data) {
-        const consultations = consultationsResponse.data.data;
-        setConsultationData({
-          upcomingConsultations: consultations.upcoming || [],
-          recentConsultations: consultations.recent || [],
-          totalConsultations: consultations.total || 0,
-          pendingPrescriptions: consultations.pendingPrescriptions || 0,
-          favouriteDoctors: consultations.favouriteDoctors || []
-        });
-      }
-    } catch (error) {
-      console.error('Error loading dashboard data:', error);
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate('/diseases', { state: { searchQuery: searchQuery.trim() } });
     }
   };
 
-  // Track feature navigation
-  const handleFeatureNavigation = (feature, path, additionalData = {}) => {
-    trackFeatureUsage(feature, additionalData);
-    navigate(path);
+  const getColorClasses = (color) => {
+    const colors = {
+      blue: 'bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-600',
+      red: 'bg-red-50 hover:bg-red-100 border-red-200 text-red-600',
+      green: 'bg-green-50 hover:bg-green-100 border-green-200 text-green-600',
+      purple: 'bg-purple-50 hover:bg-purple-100 border-purple-200 text-purple-600',
+      indigo: 'bg-indigo-50 hover:bg-indigo-100 border-indigo-200 text-indigo-600',
+      pink: 'bg-pink-50 hover:bg-pink-100 border-pink-200 text-pink-600'
+    };
+    return colors[color] || colors.blue;
   };
 
-  const handleInstantConsult = () => {
-    trackFeatureUsage('consultations', { type: 'instant' });
-    toast.info('Connecting you with an available doctor...');
-    navigate('/consultations', { state: { instant: true } });
-  };
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Welcome Section */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            Welcome to MediSync
+          </h1>
+          <p className="text-xl text-gray-600">
+            Your comprehensive healthcare platform
+          </p>
+        </div>
 
-  const getConsultationTypeIcon = (type) => {
-    switch (type) {
-      case 'video': return VideoCameraIcon;
-      case 'chat': return ChatBubbleLeftRightIcon;
-      case 'phone': return PhoneIcon;
+        {/* Search Bar */}
+        <div className="max-w-3xl mx-auto mb-16">
+          <form onSubmit={handleSearch} className="relative">
+            <div className="relative">
+              <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 h-6 w-6 text-gray-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search for diseases, symptoms, doctors..."
+                className="w-full pl-14 pr-4 py-4 text-lg border-2 border-gray-300 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+              />
+            </div>
+            <button
+              type="submit"
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            >
+              Search
+            </button>
+          </form>
+        </div>
+
+        {/* Feature Tiles */}
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
+            Explore Features
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {features.map((feature, index) => {
+              const Icon = feature.icon;
+              return (
+                <button
+                  key={index}
+                  onClick={() => navigate(feature.path)}
+                  className={`p-6 rounded-xl border-2 transition-all duration-200 text-left ${getColorClasses(feature.color)}`}
+                >
+                  <div className="flex items-start space-x-4">
+                    <div className="flex-shrink-0">
+                      <Icon className="h-8 w-8" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold mb-1">
+                        {feature.title}
+                      </h3>
+                      <p className="text-sm opacity-75">
+                        {feature.description}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default Dashboard;
       default: return ChatBubbleLeftRightIcon;
     }
   };
