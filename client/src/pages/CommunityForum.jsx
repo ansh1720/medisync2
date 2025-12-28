@@ -86,6 +86,7 @@ function CommunityForum() {
   };
 
   const [posts, setPosts] = useState([]);
+  const [userCreatedPosts, setUserCreatedPosts] = useState([]); // Track posts created by user
   const [isLoading, setIsLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -159,11 +160,24 @@ function CommunityForum() {
         );
       }
       
-      // Merge API posts with fallback posts (API posts first, then fallback)
+      // Filter user-created posts by category and search
+      let filteredUserPosts = userCreatedPosts;
+      if (selectedCategory !== 'all') {
+        filteredUserPosts = filteredUserPosts.filter(post => post.category === selectedCategory);
+      }
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        filteredUserPosts = filteredUserPosts.filter(post => 
+          post.title.toLowerCase().includes(query) ||
+          (post.tags && post.tags.some(tag => tag.toLowerCase().includes(query)))
+        );
+      }
+      
+      // Merge user-created posts, API posts, and fallback posts (in that order)
       // Remove duplicates by checking IDs
-      const apiPostIds = new Set(postsData.map(p => p._id));
-      const uniqueFallbackPosts = fallbackToShow.filter(fp => !apiPostIds.has(fp._id));
-      const mergedPosts = [...postsData, ...uniqueFallbackPosts];
+      const allPostIds = new Set([...filteredUserPosts.map(p => p._id), ...postsData.map(p => p._id)]);
+      const uniqueFallbackPosts = fallbackToShow.filter(fp => !allPostIds.has(fp._id));
+      const mergedPosts = [...filteredUserPosts, ...postsData, ...uniqueFallbackPosts];
       
       setPosts(mergedPosts);
       
@@ -246,13 +260,13 @@ function CommunityForum() {
       setNewPost({ title: '', content: '', category: 'general', tags: '' });
       setShowCreatePost(false);
       
-      // Add the new post to the beginning of the list immediately
+      // Add the new post to user-created posts to preserve it across fetches
       if (response.data && response.data.data) {
         const newPostData = response.data.data;
-        setPosts(prevPosts => [newPostData, ...prevPosts]);
+        setUserCreatedPosts(prev => [newPostData, ...prev]);
       }
       
-      // Also refresh posts to ensure we have latest data
+      // Refresh posts to get latest data from API
       setTimeout(() => {
         fetchPosts();
       }, 500);
