@@ -525,7 +525,7 @@ function CommunityForum() {
                               {post.title}
                             </h3>
                             <div className="flex items-center space-x-3 text-sm text-gray-500">
-                              <span>by {post.author?.name || 'Anonymous'}</span>
+                              <span>by {post.userId?.name || post.author?.name || 'Anonymous'}</span>
                               <span>•</span>
                               <div className="flex items-center">
                                 <ClockIcon className="h-4 w-4 mr-1" />
@@ -544,10 +544,19 @@ function CommunityForum() {
                       {/* Post Content */}
                       <div className="mb-4">
                         <p className="text-gray-700 leading-relaxed">
-                          {post.content.length > 300 
-                            ? `${post.content.substring(0, 300)}...` 
-                            : post.content
-                          }
+                          {post.body ? (
+                            post.body.length > 300 
+                              ? `${post.body.substring(0, 300)}...` 
+                              : post.body
+                          ) : (
+                            post.content ? (
+                              post.content.length > 300 
+                                ? `${post.content.substring(0, 300)}...` 
+                                : post.content
+                            ) : (
+                              'Click to read more...'
+                            )
+                          )}
                         </p>
                       </div>
 
@@ -582,17 +591,17 @@ function CommunityForum() {
                             ) : (
                               <HeartIcon className="h-5 w-5" />
                             )}
-                            <span>{post.likes || 0}</span>
+                            <span>{post.stats?.likes || post.likes || 0}</span>
                           </button>
 
                           <div className="flex items-center space-x-2 text-sm text-gray-500">
                             <ChatBubbleLeftIcon className="h-5 w-5" />
-                            <span>{post.comments?.length || 0} replies</span>
+                            <span>{post.stats?.comments || post.comments?.length || 0} replies</span>
                           </div>
                         </div>
 
                         <div className="text-sm text-gray-500">
-                          {post.views || 0} views
+                          {post.stats?.views || post.views || 0} views
                         </div>
                       </div>
                     </div>
