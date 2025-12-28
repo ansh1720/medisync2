@@ -1,6 +1,7 @@
 /**
  * MediSync Backend Server
  * Main Express server with MongoDB connection and Socket.IO
+ * Updated: 2025-12-28 - WHO/CDC/PubMed News Integration
  */
 
 const express = require('express');
