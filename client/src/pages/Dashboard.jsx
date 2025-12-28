@@ -520,7 +520,7 @@ function Dashboard() {
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">Blood Pressure</span>
                       <span className="text-sm font-medium">
-                        {healthMetrics.lastBpReading.systolic}/{healthMetrics.lastBpReading.diastolic}
+                        {healthMetrics.lastBpReading ? `${healthMetrics.lastBpReading.systolic}/${healthMetrics.lastBpReading.diastolic}` : 'No data'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
@@ -693,17 +693,19 @@ function Dashboard() {
                 </div>
                 <div className="ml-4">
                   <p className="text-2xl font-bold text-gray-900">
-                    {healthMetrics.lastBpReading.systolic}/{healthMetrics.lastBpReading.diastolic}
+                    {healthMetrics.lastBpReading ? `${healthMetrics.lastBpReading.systolic}/${healthMetrics.lastBpReading.diastolic}` : 'No data'}
                   </p>
                   <p className="text-sm text-gray-600">Blood Pressure</p>
-                  <div className="flex items-center">
-                    {healthMetrics.bpTrend === 'improving' ? (
-                      <ArrowTrendingDownIcon className="h-4 w-4 text-green-600 mr-1" />
-                    ) : (
-                      <ArrowTrendingUpIcon className="h-4 w-4 text-red-600 mr-1" />
-                    )}
-                    <p className="text-xs text-green-600">Improving</p>
-                  </div>
+                  {healthMetrics.bpTrend && (
+                    <div className="flex items-center">
+                      {healthMetrics.bpTrend === 'improving' ? (
+                        <ArrowTrendingDownIcon className="h-4 w-4 text-green-600 mr-1" />
+                      ) : (
+                        <ArrowTrendingUpIcon className="h-4 w-4 text-red-600 mr-1" />
+                      )}
+                      <p className="text-xs text-green-600">{healthMetrics.bpTrend === 'improving' ? 'Improving' : 'Needs Attention'}</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
