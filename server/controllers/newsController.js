@@ -131,6 +131,7 @@ const fetchPubMedNews = async () => {
 
 /**
  * Get health news articles from trusted sources
+ * Version: 2.0 - WHO/CDC/PubMed Integration
  */
 exports.getNews = async (req, res) => {
   try {
@@ -142,7 +143,7 @@ exports.getNews = async (req, res) => {
 
     // Fetch fresh news if cache is invalid or empty
     if (!isCacheValid || newsCache.articles.length === 0) {
-      console.log('📰 Fetching fresh news from WHO, CDC, and PubMed...');
+      console.log('📰 Fetching fresh news from WHO, CDC, and PubMed... [v2.0]');
       
       // Fetch from all sources in parallel
       const [whoArticles, cdcArticles, pubmedArticles] = await Promise.all([
