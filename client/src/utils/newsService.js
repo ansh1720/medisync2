@@ -109,6 +109,14 @@ const CATEGORY_KEYWORDS = {
 };
 
 // Enhanced news fetching with multiple diverse sources to avoid repetition
+// Import API base URL for backend fetching
+import axios from 'axios';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (typeof window !== 'undefined' && window.location.hostname === 'ansh1720.github.io' 
+    ? 'https://medisync-api-9043.onrender.com/api' 
+    : 'http://localhost:5000/api');
+
 // CACHE for all articles
 let newsArticlesCache = {
   allArticles: [],
@@ -132,53 +140,70 @@ export const fetchHealthNews = async (options = {}) => {
 
   // Fetch fresh articles if cache is invalid or empty
   if (!isCacheValid || newsArticlesCache.allArticles.length === 0) {
-    console.log('📰 Fetching fresh news from WHO, CDC, and PubMed...');
+    console.log('📰 Fetching news from backend API...');
     
-    const TIMEOUT_MS = 8000;
-    const fetchWithTimeout = (fetchFn, timeout) => {
-      return Promise.race([
-        fetchFn(),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Source timeout')), timeout)
-        )
-      ]);
-    };
-
-    // Fetch from all sources in parallel
-    const results = await Promise.allSettled([
-      fetchWithTimeout(() => fetchFromWHO({ ...options, pageSize: 100 }), TIMEOUT_MS),
-      fetchWithTimeout(() => fetchFromCDC({ ...options, pageSize: 100 }), TIMEOUT_MS),
-      fetchWithTimeout(() => fetchFromPubMed({ ...options, pageSize: 100 }), TIMEOUT_MS)
-    ]);
-
-    let allArticles = [];
-    
-    // Collect all successful results
-    results.forEach((result, index) => {
-      const sourceName = ['WHO', 'CDC', 'PubMed'][index];
-      if (result.status === 'fulfilled' && result.value.success && result.value.articles) {
-        console.log(`✅ ${sourceName} succeeded: ${result.value.articles.length} articles`);
-        allArticles.push(...result.value.articles);
-      } else {
-        console.warn(`⚠️ ${sourceName} failed:`, result.reason?.message || 'Unknown error');
+    try {
+      // Fetch multiple pages from backend to build cache
+      const pagesToFetch = 3; // Fetch 3 pages = ~60 articles
+      const fetchPromises = [];
+      
+      for (let p = 1; p <= pagesToFetch; p++) {
+        fetchPromises.push(
+          axios.get(`${API_BASE_URL}/news`, {
+            params: { page: p, limit: 20, category },
+            timeout: 60000 // 60s for Render cold start
+          })
+        );
       }
-    });
 
-    // Deduplicate and sort by date (newest first)
-    allArticles = deduplicateArticles(allArticles);
-    allArticles.sort((a, b) => {
-      const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
-      const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
-      if (isNaN(dateA) && isNaN(dateB)) return 0;
-      if (isNaN(dateA)) return 1;
-      if (isNaN(dateB)) return -1;
-      return dateB - dateA;
-    });
+      const results = await Promise.allSettled(fetchPromises);
+      let allArticles = [];
 
-    newsArticlesCache.allArticles = allArticles;
-    newsArticlesCache.lastFetch = now;
-    
-    console.log(`📦 Cached ${allArticles.length} total articles`);
+      results.forEach((result, index) => {
+        if (result.status === 'fulfilled' && result.value.data?.success) {
+          const articles = result.value.data.data.articles || [];
+          console.log(`✅ Backend page ${index + 1} succeeded: ${articles.length} articles`);
+          allArticles.push(...articles);
+        } else {
+          console.warn(`⚠️ Backend page ${index + 1} failed:`, result.reason?.message || 'Unknown error');
+        }
+      });
+
+      // Deduplicate by ID
+      const uniqueArticles = [];
+      const seenIds = new Set();
+      allArticles.forEach(article => {
+        if (!seenIds.has(article.id)) {
+          seenIds.add(article.id);
+          uniqueArticles.push(article);
+        }
+      });
+
+      // Sort by date (newest first)
+      uniqueArticles.sort((a, b) => {
+        const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+        const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+        if (isNaN(dateA) && isNaN(dateB)) return 0;
+        if (isNaN(dateA)) return 1;
+        if (isNaN(dateB)) return -1;
+        return dateB - dateA;
+      });
+
+      newsArticlesCache.allArticles = uniqueArticles;
+      newsArticlesCache.lastFetch = now;
+      
+      console.log(`📦 Cached ${uniqueArticles.length} total articles from backend`);
+    } catch (error) {
+      console.error('❌ Backend news fetch failed:', error);
+      // Return empty result if backend fails
+      return {
+        success: false,
+        articles: [],
+        totalResults: 0,
+        hasMore: false,
+        source: 'Backend API (failed)'
+      };
+    }
   } else {
     console.log(`📦 Using cached news (${newsArticlesCache.allArticles.length} articles, age: ${Math.round((now - newsArticlesCache.lastFetch) / 1000)}s)`);
   }
@@ -209,7 +234,7 @@ export const fetchHealthNews = async (options = {}) => {
     articles: paginatedArticles,
     totalResults: articles.length,
     hasMore,
-    source: 'WHO, CDC, PubMed'
+    source: 'Backend API (WHO, CDC, PubMed)'
   };
 };
 
