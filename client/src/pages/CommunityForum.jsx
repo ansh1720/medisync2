@@ -15,6 +15,7 @@ import Navbar from '../components/Navbar';
 
 const CATEGORIES = [
   { value: 'all', label: 'All Posts', color: 'gray' },
+  { value: 'my_posts', label: 'My Posts', color: 'violet' },
   { value: 'general', label: 'General Health', color: 'blue' },
   { value: 'mental_health', label: 'Mental Health', color: 'purple' },
   { value: 'nutrition', label: 'Nutrition & Diet', color: 'green' },
@@ -127,6 +128,21 @@ function CommunityForum() {
   const fetchPosts = async () => {
     setIsLoading(true);
     try {
+      // If My Posts is selected, just show user-created posts without API call
+      if (selectedCategory === 'my_posts') {
+        let filteredUserPosts = userCreatedPosts;
+        if (searchQuery.trim()) {
+          const query = searchQuery.toLowerCase();
+          filteredUserPosts = filteredUserPosts.filter(post => 
+            post.title.toLowerCase().includes(query) ||
+            (post.tags && post.tags.some(tag => tag.toLowerCase().includes(query)))
+          );
+        }
+        setPosts(filteredUserPosts);
+        setIsLoading(false);
+        return;
+      }
+      
       const params = {
         limit: 20,
         sort: '-createdAt' // Latest first
@@ -283,11 +299,6 @@ function CommunityForum() {
         const newPostData = response.data.data;
         setUserCreatedPosts(prev => [newPostData, ...prev]);
       }
-      
-      // Refresh posts to get latest data from API
-      setTimeout(() => {
-        fetchPosts();
-      }, 500);
       
     } catch (error) {
       console.error('Create post error:', error);
