@@ -97,8 +97,8 @@ app.use('/api/equipment', require('./routes/equipmentRoutes'));
 app.use('/api/hospitals', require('./routes/hospitalRoutes'));
 app.use('/api/consultation', require('./routes/consultationRoutes'));
 app.use('/api/forum', require('./routes/forumRoutes'));
-// Health news from WHO, CDC, and PubMed
-app.use('/api/news', require('./routes/newsRoutes'));
+// Health news from WHO, CDC, and PubMed (v2 endpoint)
+app.use('/api/news/v2', require('./routes/newsRoutes'));
 app.use('/api/verification', require('./routes/verificationRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 

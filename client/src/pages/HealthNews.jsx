@@ -56,7 +56,7 @@ function HealthNews() {
       const page = reset ? 1 : currentPage;
       
       try {
-        const response = await axios.get(`${API_BASE_URL}/news`, {
+        const response = await axios.get(`${API_BASE_URL}/news/v2`, {
           params: { page, limit: 20 },
           timeout: 60000
         });
