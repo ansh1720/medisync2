@@ -109,6 +109,13 @@ const CATEGORY_KEYWORDS = {
 };
 
 // Enhanced news fetching with multiple diverse sources to avoid repetition
+// CACHE for all articles
+let newsArticlesCache = {
+  allArticles: [],
+  lastFetch: null,
+  cacheDuration: 10 * 60 * 1000 // 10 minutes
+};
+
 export const fetchHealthNews = async (options = {}) => {
   const {
     page = 1,
@@ -120,123 +127,90 @@ export const fetchHealthNews = async (options = {}) => {
     language = 'en'
   } = options;
 
-  // Check if we have valid API keys
-  const hasValidNewsAPIKey = NEWS_API_SOURCES.newsapi.key && NEWS_API_SOURCES.newsapi.key !== 'demo' && NEWS_API_SOURCES.newsapi.key.length > 10;
-  const hasValidGNewsKey = NEWS_API_SOURCES.gnews.key && NEWS_API_SOURCES.gnews.key !== 'demo' && NEWS_API_SOURCES.gnews.key.length > 10;
-  const hasValidCurrentsKey = NEWS_API_SOURCES.currentsapi.key && NEWS_API_SOURCES.currentsapi.key !== 'demo' && NEWS_API_SOURCES.currentsapi.key.length > 10;
+  const now = Date.now();
+  const isCacheValid = newsArticlesCache.lastFetch && (now - newsArticlesCache.lastFetch) < newsArticlesCache.cacheDuration;
 
-  // Build strategies array - PRIORITIZE WHO and CDC (official health sources)
-  const strategies = [];
-  
-  // PRIORITY 1: WHO and CDC ONLY - Try these first sequentially
-  console.log(`📰 News fetch: Page ${page}, Prioritizing WHO and CDC...`);
-  
-  const TIMEOUT_MS = 8000; // 8 second timeout per source
-  
-  const fetchWithTimeout = (fetchFn, timeout) => {
-    return Promise.race([
-      fetchFn(),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Source timeout')), timeout)
-      )
+  // Fetch fresh articles if cache is invalid or empty
+  if (!isCacheValid || newsArticlesCache.allArticles.length === 0) {
+    console.log('📰 Fetching fresh news from WHO, CDC, and PubMed...');
+    
+    const TIMEOUT_MS = 8000;
+    const fetchWithTimeout = (fetchFn, timeout) => {
+      return Promise.race([
+        fetchFn(),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Source timeout')), timeout)
+        )
+      ]);
+    };
+
+    // Fetch from all sources in parallel
+    const results = await Promise.allSettled([
+      fetchWithTimeout(() => fetchFromWHO({ ...options, pageSize: 100 }), TIMEOUT_MS),
+      fetchWithTimeout(() => fetchFromCDC({ ...options, pageSize: 100 }), TIMEOUT_MS),
+      fetchWithTimeout(() => fetchFromPubMed({ ...options, pageSize: 100 }), TIMEOUT_MS)
     ]);
-  };
 
-  // TRY WHO FIRST
-  try {
-    console.log('🌍 Attempting WHO news...');
-    const whoResult = await fetchWithTimeout(() => fetchFromWHO(options), TIMEOUT_MS);
-    if (whoResult.success && whoResult.articles.length > 0) {
-      console.log(`✅ WHO succeeded: ${whoResult.articles.length} articles`);
-      return {
-        ...whoResult,
-        articles: deduplicateArticles(whoResult.articles)
-      };
-    }
-  } catch (whoError) {
-    console.warn('⚠️ WHO failed:', whoError.message);
-  }
-
-  // TRY CDC SECOND
-  try {
-    console.log('🏥 Attempting CDC news...');
-    const cdcResult = await fetchWithTimeout(() => fetchFromCDC(options), TIMEOUT_MS);
-    if (cdcResult.success && cdcResult.articles.length > 0) {
-      console.log(`✅ CDC succeeded: ${cdcResult.articles.length} articles`);
-      return {
-        ...cdcResult,
-        articles: deduplicateArticles(cdcResult.articles)
-      };
-    }
-  } catch (cdcError) {
-    console.warn('⚠️ CDC failed:', cdcError.message);
-  }
-
-  // TRY PUBMED THIRD
-  try {
-    console.log('📚 Attempting PubMed research...');
-    const pubmedResult = await fetchWithTimeout(() => fetchFromPubMed(options), TIMEOUT_MS);
-    if (pubmedResult.success && pubmedResult.articles.length > 0) {
-      console.log(`✅ PubMed succeeded: ${pubmedResult.articles.length} articles`);
-      return {
-        ...pubmedResult,
-        articles: deduplicateArticles(pubmedResult.articles)
-      };
-    }
-  } catch (pubmedError) {
-    console.warn('⚠️ PubMed failed:', pubmedError.message);
-  }
-
-  // PRIORITY 2: Only use other sources if WHO, CDC, and PubMed all fail
-  console.warn('⚠️ Primary health sources (WHO, CDC, PubMed) all failed. Trying backup sources...');
-  
-  // Build backup strategies
-  if (hasValidNewsAPIKey) {
-    strategies.push(
-      () => fetchFromPriorityHealthSources(options),
-      () => fetchFromInternationalSources(options),
-      () => fetchFromNewsAPI(options)
-    );
-  }
-  
-  if (hasValidGNewsKey) {
-    strategies.push(() => fetchFromGNews(options));
-  }
-  
-  if (hasValidCurrentsKey) {
-    strategies.push(() => fetchFromCurrentsAPI(options));
-  }
-
-  // Try backup sources in parallel
-  if (strategies.length > 0) {
-    console.log(`🔄 Trying ${strategies.length} backup sources in parallel...`);
-    const results = await Promise.allSettled(
-      strategies.map(strategy => fetchWithTimeout(strategy, TIMEOUT_MS))
-    );
-
-    // Find first successful result
-    for (let i = 0; i < results.length; i++) {
-      const result = results[i];
-      if (result.status === 'fulfilled' && result.value.success && result.value.articles.length > 0) {
-        console.log(`✅ Backup source succeeded: ${result.value.source}, ${result.value.articles.length} articles`);
-        return {
-          ...result.value,
-          articles: deduplicateArticles(result.value.articles)
-        };
-      }
-    }
-
-    // Log all backup errors
-    results.forEach((result, i) => {
-      if (result.status === 'rejected') {
-        console.warn(`Backup source ${i + 1} error:`, result.reason?.message || 'Unknown error');
+    let allArticles = [];
+    
+    // Collect all successful results
+    results.forEach((result, index) => {
+      const sourceName = ['WHO', 'CDC', 'PubMed'][index];
+      if (result.status === 'fulfilled' && result.value.success && result.value.articles) {
+        console.log(`✅ ${sourceName} succeeded: ${result.value.articles.length} articles`);
+        allArticles.push(...result.value.articles);
+      } else {
+        console.warn(`⚠️ ${sourceName} failed:`, result.reason?.message || 'Unknown error');
       }
     });
+
+    // Deduplicate and sort by date (newest first)
+    allArticles = deduplicateArticles(allArticles);
+    allArticles.sort((a, b) => {
+      const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+      const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+      if (isNaN(dateA) && isNaN(dateB)) return 0;
+      if (isNaN(dateA)) return 1;
+      if (isNaN(dateB)) return -1;
+      return dateB - dateA;
+    });
+
+    newsArticlesCache.allArticles = allArticles;
+    newsArticlesCache.lastFetch = now;
+    
+    console.log(`📦 Cached ${allArticles.length} total articles`);
+  } else {
+    console.log(`📦 Using cached news (${newsArticlesCache.allArticles.length} articles, age: ${Math.round((now - newsArticlesCache.lastFetch) / 1000)}s)`);
   }
 
-  // LAST RESORT: Mock data
-  console.warn('❌ All news sources failed. Using mock health news data.');
-  return await fetchDiverseMockData(options);
+  // Get articles from cache
+  let articles = [...newsArticlesCache.allArticles];
+
+  // Apply search filter if provided
+  if (searchQuery) {
+    const query = searchQuery.toLowerCase();
+    articles = articles.filter(article =>
+      article.title.toLowerCase().includes(query) ||
+      (article.summary || article.description || '').toLowerCase().includes(query) ||
+      (article.tags || []).some(tag => tag.toLowerCase().includes(query))
+    );
+  }
+
+  // Paginate
+  const startIndex = (page - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedArticles = articles.slice(startIndex, endIndex);
+  const hasMore = endIndex < articles.length;
+
+  console.log(`📄 Page ${page}: Returning ${paginatedArticles.length} articles (${startIndex + 1}-${startIndex + paginatedArticles.length} of ${articles.length})`);
+
+  return {
+    success: true,
+    articles: paginatedArticles,
+    totalResults: articles.length,
+    hasMore,
+    source: 'WHO, CDC, PubMed'
+  };
 };
 
 // Fetch from priority health sources (WHO, CDC, NIH, etc.)
