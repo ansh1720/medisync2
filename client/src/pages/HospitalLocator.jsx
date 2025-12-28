@@ -50,44 +50,10 @@ function HospitalLocator() {
   const [placeSearch, setPlaceSearch] = useState('');
   const [isSearchingPlace, setIsSearchingPlace] = useState(false);
 
-  // Track page visit and auto-detect location
+  // Track page visit - removed auto-detect location
   useEffect(() => {
     trackFeatureUsage('hospitalLocator', { source: 'direct' });
-    
-    // Auto-detect user location on page load
-    if (!navigator.geolocation) {
-      // If geolocation not supported, use NYC as default
-      const nycLocation = { latitude: 40.7128, longitude: -74.0060 };
-      setUserLocation(nycLocation);
-      setCurrentLocationName('New York, NY');
-      searchHospitals(nycLocation);
-    } else {
-      // Try to get user's actual location
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const location = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude
-          };
-          setUserLocation(location);
-          console.log('Auto-detected user location:', location);
-          searchHospitals(location);
-        },
-        (error) => {
-          // If location access denied or error, fallback to NYC
-          console.log('Location access denied or error, using NYC as default');
-          const nycLocation = { latitude: 40.7128, longitude: -74.0060 };
-          setUserLocation(nycLocation);
-          setCurrentLocationName('New York, NY (Default)');
-          searchHospitals(nycLocation);
-        },
-        {
-          enableHighAccuracy: false, // Don't need high accuracy for initial load
-          timeout: 5000, // 5 second timeout
-          maximumAge: 300000 // 5 minutes
-        }
-      );
-    }
+    // Location detection now happens only when user clicks the GPS button
   }, []);
   const [currentLocationName, setCurrentLocationName] = useState('');
   const [dataSource, setDataSource] = useState('maps'); // Always use real data now
@@ -103,6 +69,9 @@ function HospitalLocator() {
   const [hospitalSuggestions, setHospitalSuggestions] = useState([]);
   const [showHospitalSuggestions, setShowHospitalSuggestions] = useState(false);
   const [selectedHospitalIndex, setSelectedHospitalIndex] = useState(-1);
+  
+  // Location method state
+  const [locationMethod, setLocationMethod] = useState('gps'); // 'gps' or 'manual'
 
   // Get user's current location
   const getCurrentLocation = () => {
@@ -700,87 +669,117 @@ function HospitalLocator() {
         {/* Search Form */}
         <div className="card mb-8">
           <div className="space-y-6">
-            {/* Location Section - Auto-detected */}
+            {/* Location Method Toggle */}
             <div>
-              <label className="label">Your Location (Auto-detected)</label>
-              <div className="space-y-3">
-                <div className="flex gap-2">
-                  <div className="flex-1">
-                    {userLocation ? (
-                      <div className="input bg-green-50 text-green-700">
-                        📍 {currentLocationName || `${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)}`}
-                      </div>
-                    ) : (
-                      <div className="input bg-blue-50 text-blue-700">
-                        🔍 Detecting your location...
-                      </div>
-                    )}
+              <label className="label mb-3">Choose Location Method</label>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setLocationMethod('gps')}
+                  className={`flex-1 py-3 px-4 rounded-lg border-2 transition-all ${
+                    locationMethod === 'gps'
+                      ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
+                      : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                  }`}
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span>Detect Location (GPS)</span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={getCurrentLocation}
-                    disabled={isGettingLocation}
-                    className="btn btn-secondary"
-                  >
-                    {isGettingLocation ? (
-                      <div className="flex items-center">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Detecting...
-                      </div>
-                    ) : (
-                      'Refresh Location'
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const nycLocation = { latitude: 40.7128, longitude: -74.0060 };
-                      setUserLocation(nycLocation);
-                      setCurrentLocationName('New York, NY (Test)');
-                      toast.success('Test location set to NYC');
-                      searchHospitals(nycLocation);
-                    }}
-                    className="btn btn-secondary text-sm"
-                  >
-                    Test NYC
-                  </button>
-                  {userLocation && (
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLocationMethod('manual')}
+                  className={`flex-1 py-3 px-4 rounded-lg border-2 transition-all ${
+                    locationMethod === 'manual'
+                      ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
+                      : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                  }`}
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                    <span>Enter Location Manually</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* GPS Location Method */}
+            {locationMethod === 'gps' && (
+              <div>
+                <label className="label">Your Location (GPS)</label>
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      {userLocation ? (
+                        <div className="input bg-green-50 text-green-700">
+                          📍 {currentLocationName || `${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)}`}
+                        </div>
+                      ) : (
+                        <div className="input bg-blue-50 text-blue-700">
+                          🔍 Click "Detect Location" to find nearby hospitals
+                        </div>
+                      )}
+                    </div>
                     <button
                       type="button"
-                      onClick={resetLocation}
-                      className="btn btn-secondary text-sm bg-red-100 text-red-700 hover:bg-red-200"
+                      onClick={getCurrentLocation}
+                      disabled={isGettingLocation}
+                      className="btn btn-primary"
                     >
-                      Reset
+                      {isGettingLocation ? (
+                        <div className="flex items-center">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Detecting...
+                        </div>
+                      ) : (
+                        'Detect Location'
+                      )}
                     </button>
+                    {userLocation && (
+                      <button
+                        type="button"
+                        onClick={resetLocation}
+                        className="btn btn-secondary text-sm bg-red-100 text-red-700 hover:bg-red-200"
+                      >
+                        Reset
+                      </button>
+                    )}
+                  </div>
+                  
+                  {!userLocation && (
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm text-blue-800">
+                        <strong>Allow location access</strong> to automatically find hospitals near you
+                      </p>
+                    </div>
                   )}
                 </div>
-                
-                {/* Directions Info */}
-                {!userLocation && (
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-sm text-blue-800">
-                      <strong>Get Directions:</strong> Set your location above to enable "Get Directions" buttons that will open 
-                      Google Maps with turn-by-turn navigation to any hospital.
-                    </p>
-                  </div>
-                )}
-                
-                {/* Advanced Place Search with Autocomplete */}
-                <div className="border rounded-lg p-4 bg-gray-50">
-                  <h4 className="font-medium text-gray-900 mb-3">Search Any Location or Hospital</h4>
+              </div>
+            )}
+
+            {/* Manual Location Method */}
+            {locationMethod === 'manual' && (
+              <div>
+                <label className="label">Enter Location</label>
+                <div className="space-y-3">
                   <div className="relative">
                     <div className="flex gap-3">
                       <div className="flex-1 relative">
                         <input
                           type="text"
                           className="input w-full pr-10"
-                          placeholder="Type place names (va for Vapi, Valsad) OR hospital names..."
+                          placeholder="Enter city, address, or place name (e.g., Mumbai, Vapi, New York)..."
                           value={placeSearch}
                           onChange={(e) => handleSearchInputChange(e.target.value)}
                           onKeyDown={handleKeyDown}
                           onFocus={() => placeSearch.length >= 2 && setShowSuggestions(true)}
                           onBlur={() => {
-                            // Delay hiding suggestions to allow click
                             setTimeout(() => setShowSuggestions(false), 200);
                           }}
                         />
@@ -811,48 +810,23 @@ function HospitalLocator() {
                                       <MapPinIcon className="h-4 w-4 text-gray-400" />
                                     )}
                                   </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="font-medium text-gray-900 truncate">
-                                      {suggestion.name}
-                                    </div>
-                                    <div className="text-sm text-gray-600 truncate">
-                                      {suggestion.specialties && suggestion.type === 'hospital' && (
-                                        <span className="text-blue-600">{suggestion.specialties} • </span>
-                                      )}
-                                      {suggestion.displayName}
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-2 flex-shrink-0">
-                                    {suggestion.rating && suggestion.type === 'hospital' && (
-                                      <div className="flex items-center">
-                                        <StarIcon className="h-3 w-3 text-yellow-400 fill-current" />
-                                        <span className="text-xs font-medium ml-1">{suggestion.rating}</span>
+                                  <div className="flex-1">
+                                    <div className="font-medium text-gray-900">{suggestion.name}</div>
+                                    {suggestion.address && (
+                                      <div className="text-sm text-gray-500">{suggestion.address}</div>
+                                    )}
+                                    {suggestion.type === 'hospital' && suggestion.distance && (
+                                      <div className="text-xs text-blue-600 mt-1">
+                                        📍 {suggestion.distance}
                                       </div>
                                     )}
-                                    <span className={`text-xs px-2 py-1 rounded-full ${
-                                      suggestion.type === 'hospital'
-                                        ? 'bg-red-100 text-red-800'
-                                        : suggestion.confidence === 'high' 
-                                        ? 'bg-green-100 text-green-800' 
-                                        : 'bg-yellow-100 text-yellow-800'
-                                    }`}>
-                                      {suggestion.type}
-                                    </span>
+                                  </div>
+                                  <div className="text-xs text-gray-400 ml-2">
+                                    {suggestion.type === 'hospital' ? 'Hospital' : 'Location'}
                                   </div>
                                 </div>
                               </div>
                             ))}
-                          </div>
-                        )}
-                        
-                        {/* No suggestions message */}
-                        {showSuggestions && !isLoadingSuggestions && suggestions.length === 0 && placeSearch.length >= 2 && (
-                          <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-4">
-                            <div className="text-gray-500 text-center">
-                              <MagnifyingGlassIcon className="h-6 w-6 mx-auto mb-2 text-gray-400" />
-                              <p>No suggestions found for "{placeSearch}"</p>
-                              <p className="text-xs mt-1">Try typing a different place name</p>
-                            </div>
                           </div>
                         )}
                       </div>
@@ -868,30 +842,22 @@ function HospitalLocator() {
                             Searching...
                           </div>
                         ) : (
-                          'Search'
+                          'Find Hospitals'
                         )}
                       </button>
                     </div>
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <p className="text-xs text-gray-600 w-full">
-                      <strong>Smart Search:</strong> Type partial names like "va" for places (Vapi, Valsad) OR hospital names for direct filtering!
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {['Mumbai', 'Delhi', 'Bangalore', 'Vapi', 'Valsad', 'Chennai'].map((city) => (
-                        <button
-                          key={city}
-                          onClick={() => handleSearchInputChange(city)}
-                          className="text-xs px-3 py-1 bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200 transition-colors"
-                        >
-                          {city}
-                        </button>
-                      ))}
+                  
+                  {userLocation && currentLocationName && (
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-sm text-green-800">
+                        <strong>Selected:</strong> {currentLocationName}
+                      </p>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Search and Filters */}
             <div className="space-y-4">
