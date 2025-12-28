@@ -17,6 +17,8 @@ function HealthNews() {
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [selectedArticle, setSelectedArticle] = useState(null);
+  const [showModal, setShowModal] = useState(false);
   
   const observerRef = useRef();
 
@@ -250,13 +252,14 @@ function HealthNews() {
               const isLastArticle = index === articles.length - 1;
 
               return (
-                <a
+                <div
                   key={article.id}
-                  href={article.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  onClick={() => {
+                    setSelectedArticle(article);
+                    setShowModal(true);
+                  }}
                   ref={isLastArticle ? lastArticleElementRef : null}
-                  className="block bg-white rounded-lg shadow hover:shadow-lg transition-all duration-300 p-5 border border-gray-200 hover:border-blue-300"
+                  className="block bg-white rounded-lg shadow hover:shadow-lg transition-all duration-300 p-5 border border-gray-200 hover:border-blue-300 cursor-pointer"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -278,7 +281,7 @@ function HealthNews() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </div>
-                </a>
+                </div>
               );
             })}
           </div>
@@ -323,6 +326,60 @@ function HealthNews() {
         >
           <ArrowUpIcon className="h-6 w-6" />
         </button>
+      )}
+
+      {/* Article Modal */}
+      {showModal && selectedArticle && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto my-8">
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex justify-between items-start z-10">
+              <div className="flex-1 pr-4">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">{selectedArticle.title}</h2>
+                <div className="flex items-center gap-3 text-sm text-gray-600">
+                  <span className="font-medium text-blue-600">{selectedArticle.source}</span>
+                  <span>•</span>
+                  <span>{formatDate(selectedArticle.publishedAt)}</span>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowModal(false);
+                  setSelectedArticle(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6">
+              <div className="prose max-w-none">
+                <p className="text-gray-700 leading-relaxed whitespace-pre-line">
+                  {selectedArticle.content || 'Full article content not available. Please visit the source website for more details.'}
+                </p>
+              </div>
+
+              {/* View Original Button */}
+              <div className="mt-8 pt-6 border-t border-gray-200">
+                <a
+                  href={selectedArticle.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <span>View Original Article</span>
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

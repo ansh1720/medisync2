@@ -30,6 +30,7 @@ const fetchWHONews = async () => {
           const articles = result.rss.channel[0].item.map((item, index) => ({
             id: `who-${Date.now()}-${index}`,
             title: item.title[0],
+            content: item.description ? item.description[0] : 'Full article available at source.',
             url: item.link[0],
             source: 'WHO',
             publishedAt: new Date(item.pubDate[0]),
@@ -65,6 +66,7 @@ const fetchCDCNews = async () => {
       return response.data.results.map((item, index) => ({
         id: `cdc-${Date.now()}-${index}`,
         title: item.name || item.title,
+        content: item.description || item.contentDescription || 'Full article available at CDC website.',
         url: item.sourceUrl || item.url,
         source: 'CDC',
         publishedAt: new Date(item.datePublished || item.publishDate),
@@ -113,6 +115,7 @@ const fetchPubMedNews = async () => {
             return {
               id: `pubmed-${id}`,
               title: article.title || 'Research Article',
+              content: `${article.title || 'Medical Research'} - Published in ${article.source || 'medical journal'}. ${article.authors && article.authors.length > 0 ? 'Authors: ' + article.authors.slice(0, 3).map(a => a.name).join(', ') : ''} This peer-reviewed research article contains detailed findings on disease prevention, diagnosis, or treatment.`,
               url: `https://pubmed.ncbi.nlm.nih.gov/${id}/`,
               source: 'PubMed',
               publishedAt: new Date(article.pubdate || Date.now()),
