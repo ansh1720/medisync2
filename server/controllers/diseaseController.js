@@ -5,13 +5,6 @@
 
 const { validationResult } = require('express-validator');
 const Disease = require('../models/Disease');
-const DiseaseDataParser = require('../utils/diseaseParser');
-
-// Initialize the disease parser for CSV data
-const diseaseParser = new DiseaseDataParser();
-
-// Load CSV data on startup
-diseaseParser.loadData().catch(console.error);
 
 /**
  * Get diseases with pagination, search, and filters
@@ -41,44 +34,50 @@ const getDiseases = async (req, res, next) => {
       sortOrder = 'asc'
     } = req.query;
 
-    // Use CSV data as primary source
-    let csvDiseases = diseaseParser.getAllDiseases();
+    // Build query
+    const query = {};
     
-    // Apply filters to CSV data
     if (name) {
-      csvDiseases = csvDiseases.filter(disease => 
-        disease.name.toLowerCase().includes(name.toLowerCase())
-      );
+      query.name = { $regex: name, $options: 'i' };
     }
     
     if (symptom) {
-      csvDiseases = csvDiseases.filter(disease => 
-        disease.symptoms && disease.symptoms.some(s => 
-          s.toLowerCase().includes(symptom.toLowerCase())
-        )
-      );
+      query.symptoms = { $regex: symptom, $options: 'i' };
+    }
+    
+    if (category) {
+      query.category = category;
+    }
+    
+    if (severity) {
+      query.severity = severity;
+    }
+    
+    if (tags) {
+      query.tags = { $in: tags.split(',') };
     }
 
-    // Sort the results
-    csvDiseases.sort((a, b) => {
-      if (sortBy === 'name') {
-        return sortOrder === 'asc' 
-          ? a.name.localeCompare(b.name)
-          : b.name.localeCompare(a.name);
-      }
-      return 0;
-    });
+    // Build sort object
+    const sort = {};
+    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
 
-    // Apply pagination
-    const totalCount = csvDiseases.length;
+    // Execute query with pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
-    const paginatedDiseases = csvDiseases.slice(skip, skip + parseInt(limit));
+    const [diseases, totalCount] = await Promise.all([
+      Disease.find(query)
+        .sort(sort)
+        .skip(skip)
+        .limit(parseInt(limit))
+        .lean(),
+      Disease.countDocuments(query)
+    ]);
+
     const totalPages = Math.ceil(totalCount / parseInt(limit));
 
     res.json({
       success: true,
       data: {
-        diseases: paginatedDiseases,
+        diseases,
         pagination: {
           currentPage: parseInt(page),
           totalPages,
@@ -87,7 +86,7 @@ const getDiseases = async (req, res, next) => {
           hasPrevPage: parseInt(page) > 1
         }
       },
-      message: 'Diseases retrieved successfully from CSV data'
+      message: 'Diseases retrieved successfully from database'
     });
 
   } catch (error) {
@@ -120,23 +119,42 @@ const searchDiseases = async (req, res, next) => {
       tags
     } = req.query;
 
-    // Use CSV data for search
-    const searchResults = diseaseParser.searchDiseases(q, {
-      limit: parseInt(limit),
-      includeChartData: false,
-      sortBy: 'relevance'
-    });
+    // Build text search query
+    const query = {};
+    
+    if (q) {
+      query.$text = { $search: q };
+    }
+    
+    if (category) {
+      query.category = category;
+    }
+    
+    if (severity) {
+      query.severity = severity;
+    }
+    
+    if (tags) {
+      query.tags = { $in: tags.split(',') };
+    }
 
-    // Apply pagination to results
-    const totalCount = searchResults.length;
+    // Execute query with text score sorting
     const skip = (parseInt(page) - 1) * parseInt(limit);
-    const paginatedResults = searchResults.slice(skip, skip + parseInt(limit));
+    const [diseases, totalCount] = await Promise.all([
+      Disease.find(query, q ? { score: { $meta: 'textScore' } } : {})
+        .sort(q ? { score: { $meta: 'textScore' } } : { name: 1 })
+        .skip(skip)
+        .limit(parseInt(limit))
+        .lean(),
+      Disease.countDocuments(query)
+    ]);
+
     const totalPages = Math.ceil(totalCount / parseInt(limit));
 
     res.json({
       success: true,
       data: {
-        diseases: paginatedResults,
+        diseases,
         searchQuery: q,
         pagination: {
           currentPage: parseInt(page),
@@ -146,7 +164,7 @@ const searchDiseases = async (req, res, next) => {
           hasPrevPage: parseInt(page) > 1
         }
       },
-      message: 'Search completed successfully using CSV data'
+      message: 'Search completed successfully from database'
     });
 
   } catch (error) {
