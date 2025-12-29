@@ -107,75 +107,34 @@ function DoctorDashboard() {
         })
       ]);
 
-      // Use real data if available, otherwise fall back to mock data
+      // Use real data if available, otherwise use empty/zero values
       if (statsResponse?.data?.data) {
         const statsData = statsResponse.data.data;
         setStats({
-          todayAppointments: statsData.todayAppointments || 8,
-          totalPatients: statsData.totalPatients || 142,
-          completedConsultations: statsData.completedThisMonth || 89,
-          upcomingAppointments: statsData.upcomingAppointments || 12,
-          averageRating: statsData.averageRating || 4.8,
-          totalReviews: statsData.totalReviews || 67
+          todayAppointments: statsData.todayAppointments || 0,
+          totalPatients: statsData.totalPatients || 0,
+          completedConsultations: statsData.completedThisMonth || 0,
+          upcomingAppointments: statsData.upcomingAppointments || 0,
+          averageRating: statsData.averageRating || 0,
+          totalReviews: statsData.totalReviews || 0
         });
       } else {
-        // Mock data fallback
+        // Empty state fallback
         setStats({
-          todayAppointments: 8,
-          totalPatients: 142,
-          completedConsultations: 89,
-          upcomingAppointments: 12,
-          averageRating: 4.8,
-          totalReviews: 67
+          todayAppointments: 0,
+          totalPatients: 0,
+          completedConsultations: 0,
+          upcomingAppointments: 0,
+          averageRating: 0,
+          totalReviews: 0
         });
       }
 
       if (scheduleResponse?.data?.data?.appointments) {
         setAppointments(scheduleResponse.data.data.appointments);
       } else {
-        // Mock appointments
-        setAppointments([
-          {
-            id: 1,
-            patientName: 'Ananya Singh',
-            patientAge: 32,
-            time: '09:00 AM',
-            type: 'video',
-            condition: 'Regular Checkup',
-            status: 'confirmed',
-            duration: 30
-          },
-          {
-            id: 2,
-            patientName: 'Arjun Iyer',
-            patientAge: 45,
-            time: '10:30 AM',
-            type: 'in-person',
-            condition: 'Hypertension Follow-up',
-            status: 'confirmed',
-            duration: 45
-          },
-          {
-            id: 3,
-            patientName: 'Meera Nair',
-            patientAge: 28,
-            time: '02:00 PM',
-            type: 'phone',
-            condition: 'Prescription Renewal',
-            status: 'pending',
-            duration: 15
-          },
-          {
-            id: 4,
-            patientName: 'Vikram Malhotra',
-            patientAge: 38,
-            time: '03:30 PM',
-            type: 'video',
-            condition: 'Diabetes Consultation',
-            status: 'confirmed',
-            duration: 30
-          }
-        ]);
+        // Empty appointments
+        setAppointments([]);
       }
 
       // Load recent patients from API
@@ -252,40 +211,8 @@ function DoctorDashboard() {
         }
       } catch (error) {
         console.error('Error loading consultations from API:', error);
-        // Fall back to mock data if API fails
-        const savedRequests = JSON.parse(localStorage.getItem('consultationRequests') || '[]');
-        
-        const processedRequests = savedRequests.map(req => ({
-          ...req,
-          requestedTime: new Date(req.requestedTime),
-          requestedAt: new Date(req.requestedAt)
-        }));
-        
-        if (processedRequests.length === 0) {
-          const mockRequests = [
-            {
-              id: 1,
-              patientName: 'Rohan Desai',
-              age: 35,
-              requestedTime: new Date(Date.now() + 2 * 60 * 60 * 1000),
-              urgency: 'medium',
-              symptoms: 'Chest pain, shortness of breath',
-              requestedAt: new Date(Date.now() - 30 * 60 * 1000)
-            },
-            {
-              id: 2,
-              patientName: 'Aisha Khan',
-              age: 28,
-              requestedTime: new Date(Date.now() + 4 * 60 * 60 * 1000),
-              urgency: 'low',
-              symptoms: 'Skin rash, itching',
-              requestedAt: new Date(Date.now() - 45 * 60 * 1000)
-            }
-          ];
-          setConsultationRequests(mockRequests);
-        } else {
-          setConsultationRequests(processedRequests);
-        }
+        // Fall back to empty array if API fails
+        setConsultationRequests([]);
       }
 
       setIsLoading(false);
@@ -620,7 +547,7 @@ function DoctorDashboard() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Today's Appointments</p>
                 <p className="text-3xl font-bold text-gray-900">{stats.todayAppointments}</p>
-                <p className="text-sm text-blue-600">4 confirmed, 1 pending</p>
+                <p className="text-sm text-blue-600">Scheduled for today</p>
               </div>
               <div className="p-3 bg-blue-100 rounded-full">
                 <CalendarDaysIcon className="h-8 w-8 text-blue-600" />
@@ -634,7 +561,7 @@ function DoctorDashboard() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Patients</p>
                 <p className="text-3xl font-bold text-gray-900">{stats.totalPatients}</p>
-                <p className="text-sm text-green-600">+8 this month</p>
+                <p className="text-sm text-green-600">All time</p>
               </div>
               <div className="p-3 bg-green-100 rounded-full">
                 <UserGroupIcon className="h-8 w-8 text-green-600" />
@@ -648,7 +575,7 @@ function DoctorDashboard() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Completed This Month</p>
                 <p className="text-3xl font-bold text-gray-900">{stats.completedConsultations}</p>
-                <p className="text-sm text-purple-600">89% completion rate</p>
+                <p className="text-sm text-purple-600">Successful consultations</p>
               </div>
               <div className="p-3 bg-purple-100 rounded-full">
                 <CheckCircleIcon className="h-8 w-8 text-purple-600" />
