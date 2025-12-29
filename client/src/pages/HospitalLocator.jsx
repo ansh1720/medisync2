@@ -722,7 +722,7 @@ function HospitalLocator() {
                         </div>
                       ) : (
                         <div className="input bg-blue-50 text-blue-700">
-                          🔍 Click "Detect Location" to find nearby hospitals
+                           Click "Detect Location" to find nearby hospitals
                         </div>
                       )}
                     </div>

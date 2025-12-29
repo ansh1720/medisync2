@@ -22,13 +22,7 @@ const diseaseSchema = new mongoose.Schema({
   },
   symptoms: {
     type: [String],
-    required: [true, 'At least one symptom is required'],
-    validate: {
-      validator: function(v) {
-        return v && v.length > 0;
-      },
-      message: 'At least one symptom is required'
-    }
+    default: []
   },
   prevention: {
     type: [String],
@@ -106,7 +100,7 @@ const diseaseSchema = new mongoose.Schema({
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: false
   },
   lastModifiedBy: {
     type: mongoose.Schema.Types.ObjectId,
