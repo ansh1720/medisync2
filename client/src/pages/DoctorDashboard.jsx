@@ -2,835 +2,302 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { consultationAPI, verificationAPI } from '../utils/api';
-import { 
-  CalendarDaysIcon, 
-  UserGroupIcon, 
-  ClockIcon, 
-  CheckCircleIcon,
-  DocumentTextIcon,
-  PlusIcon,
-  ChatBubbleLeftRightIcon,
-  HeartIcon,
-  ExclamationTriangleIcon,
-  StarIcon,
-  PhoneIcon,
-  VideoCameraIcon,
-  ShieldCheckIcon,
-  XCircleIcon,
-  DocumentCheckIcon
-} from '@heroicons/react/24/outline';
 import Navbar from '../components/Navbar';
 import toast from 'react-hot-toast';
 
 function DoctorDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [stats, setStats] = useState({
-    todayAppointments: 0,
-    totalPatients: 0,
-    completedConsultations: 0,
-    upcomingAppointments: 0,
-    averageRating: 0,
-    totalReviews: 0
-  });
-  const [appointments, setAppointments] = useState([]);
-  const [recentPatients, setRecentPatients] = useState([]);
-  const [consultationRequests, setConsultationRequests] = useState([]);
+
+  const [stats, setStats] = useState(null);
+  const [consultations, setConsultations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [verificationStatus, setVerificationStatus] = useState(null);
-  const [verifiedDoctors, setVerifiedDoctors] = useState([]);
-  const hasLoadedData = useRef(false);
+  const [filter, setFilter] = useState('upcoming'); // upcoming | today | all
+  const hasLoaded = useRef(false);
 
   useEffect(() => {
-    // Prevent duplicate API calls in React StrictMode
-    if (!hasLoadedData.current) {
-      hasLoadedData.current = true;
-      loadDoctorData();
-      loadVerificationData();
+    if (!hasLoaded.current) {
+      hasLoaded.current = true;
+      loadData();
     }
   }, []);
 
-  const loadVerificationData = async () => {
+  useEffect(() => {
+    loadConsultations();
+  }, [filter]);
+
+  const loadData = async () => {
+    setIsLoading(true);
+    await Promise.all([loadStats(), loadConsultations(), loadVerification()]);
+    setIsLoading(false);
+  };
+
+  const loadStats = async () => {
     try {
-      console.log('Loading verification status...');
-      // Load verification status
-      const statusResponse = await verificationAPI.getVerificationStatus();
-      console.log('Verification status response:', statusResponse);
-      if (statusResponse.data.success) {
-        console.log('Verification status data:', statusResponse.data.data);
-        setVerificationStatus(statusResponse.data.data);
-      }
-    } catch (error) {
-      console.error('Error loading verification data:', error);
-      // Set default status if API fails - assume not submitted
-      setVerificationStatus({
-        verificationStatus: 'not_submitted',
-        isVerified: false
-      });
+      const res = await consultationAPI.getDoctorStats();
+      if (res.data.success) setStats(res.data.data);
+    } catch (err) {
+      console.error('Failed to load stats:', err);
     }
+  };
 
+  const loadConsultations = async () => {
     try {
-      // Load verified doctors list
-      const doctorsResponse = await verificationAPI.getVerifiedDoctors({ limit: 10 });
-      if (doctorsResponse.data.success) {
-        setVerifiedDoctors(doctorsResponse.data.data.doctors);
+      const params = {};
+      if (filter === 'upcoming') {
+        params.status = 'confirmed';
+      } else if (filter === 'today') {
+        params.date = new Date().toISOString().split('T')[0];
       }
-    } catch (error) {
-      console.error('Error loading verified doctors:', error);
+      const res = await consultationAPI.getDoctorConsultations(params);
+      setConsultations(res.data.data || []);
+    } catch (err) {
+      console.error('Failed to load consultations:', err);
+      setConsultations([]);
     }
   };
 
-  const loadDoctorData = async () => {
+  const loadVerification = async () => {
     try {
-      setIsLoading(true);
-      
-      // Load doctor schedule and stats from real API
-      const [scheduleResponse, statsResponse, upcomingResponse] = await Promise.all([
-        consultationAPI.getDoctorSchedule({ 
-          date: new Date().toISOString().split('T')[0],
-          view: 'day' 
-        }).catch(err => {
-          console.log('Schedule endpoint not available, using mock data');
-          return null;
-        }),
-        consultationAPI.getConsultationStats({
-          period: 'month'
-        }).catch(err => {
-          console.log('Stats endpoint not available, using mock data');
-          return null;
-        }),
-        consultationAPI.getUpcomingConsultations({
-          hours: 24
-        }).catch(err => {
-          console.log('Upcoming consultations endpoint not available, using mock data');
-          return null;
-        })
-      ]);
-
-      // Use real data if available, otherwise use empty/zero values
-      if (statsResponse?.data?.data) {
-        const statsData = statsResponse.data.data;
-        setStats({
-          todayAppointments: statsData.todayAppointments || 0,
-          totalPatients: statsData.totalPatients || 0,
-          completedConsultations: statsData.completedThisMonth || 0,
-          upcomingAppointments: statsData.upcomingAppointments || 0,
-          averageRating: statsData.averageRating || 0,
-          totalReviews: statsData.totalReviews || 0
-        });
-      } else {
-        // Empty state fallback
-        setStats({
-          todayAppointments: 0,
-          totalPatients: 0,
-          completedConsultations: 0,
-          upcomingAppointments: 0,
-          averageRating: 0,
-          totalReviews: 0
-        });
-      }
-
-      if (scheduleResponse?.data?.data?.appointments) {
-        setAppointments(scheduleResponse.data.data.appointments);
-      } else {
-        // Empty appointments
-        setAppointments([]);
-      }
-
-      // Load recent patients from API
-      try {
-        const patientsResponse = await consultationAPI.getDoctorPatients();
-        if (patientsResponse.data.success) {
-          const patients = patientsResponse.data.data.patients || [];
-          // Take only the 3 most recent patients
-          const recentPatients = patients
-            .sort((a, b) => new Date(b.lastVisit) - new Date(a.lastVisit))
-            .slice(0, 3)
-            .map(p => ({
-              id: p.id,
-              name: p.name,
-              age: p.age,
-              condition: p.condition,
-              lastVisit: new Date(p.lastVisit),
-              nextAppointment: p.nextAppointment ? new Date(p.nextAppointment) : null,
-              status: p.status
-            }));
-          
-          setRecentPatients(recentPatients);
-        }
-      } catch (error) {
-        console.error('Error loading recent patients:', error);
-        // Set empty array if API fails
-        setRecentPatients([]);
-      }
-
-      // Load consultation requests from API (scheduled consultations)
-      try {
-        const scheduleResponse = await consultationAPI.getDoctorSchedule({ 
-          status: 'scheduled',
-          view: 'week'
-        });
-        
-        if (scheduleResponse.data.success) {
-          // Convert scheduled consultations to consultation requests format
-          const allConsultations = Object.values(scheduleResponse.data.data.schedule).flat();
-          
-          // Filter for upcoming consultations that need action
-          const requests = allConsultations
-            .filter(c => c.status === 'scheduled' && new Date(c.scheduledDateTime) > new Date())
-            .map(c => ({
-              id: c._id,
-              patientName: c.patientId?.name || 'Unknown Patient',
-              age: c.patientId?.age || 'N/A',
-              requestedTime: new Date(c.scheduledDateTime),
-              urgency: c.urgency || 'medium',
-              symptoms: c.symptoms || c.chiefComplaint || 'No symptoms provided',
-              requestedAt: new Date(c.createdAt || c.scheduledDateTime)
-            }));
-          
-          setConsultationRequests(requests);
-          
-          // Set appointments from confirmed consultations
-          const confirmedAppointments = allConsultations
-            .filter(c => c.status === 'scheduled')
-            .map(c => ({
-              id: c._id,
-              patientName: c.patientId?.name || 'Unknown Patient',
-              patientAge: c.patientId?.age || 'N/A',
-              time: new Date(c.scheduledDateTime).toLocaleTimeString('en-US', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-              }),
-              type: c.consultationType || 'video',
-              condition: c.symptoms || c.chiefComplaint || 'Consultation',
-              status: 'confirmed',
-              duration: c.duration || 30
-            }));
-          
-          setAppointments(confirmedAppointments);
-        }
-      } catch (error) {
-        console.error('Error loading consultations from API:', error);
-        // Fall back to empty array if API fails
-        setConsultationRequests([]);
-      }
-
-      setIsLoading(false);
-    } catch (error) {
-      console.error('Error loading doctor data:', error);
-      toast.error('Failed to load doctor dashboard data');
-      setIsLoading(false);
+      const res = await verificationAPI.getVerificationStatus();
+      if (res.data.success) setVerificationStatus(res.data.data);
+    } catch {
+      setVerificationStatus({ verificationStatus: 'not_submitted', isVerified: false });
     }
   };
 
-  const handleAcceptConsultation = async (requestId) => {
+  const handleAccept = async (id) => {
     try {
-      // In a real implementation, this would call an API to accept the consultation
-      // For now, we'll simulate the API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const acceptedRequest = consultationRequests.find(req => req.id === requestId);
-      if (acceptedRequest) {
-        // Add to appointments
-        const newAppointment = {
-          id: Date.now(),
-          patientName: acceptedRequest.patientName,
-          patientAge: acceptedRequest.age,
-          time: formatTime(acceptedRequest.requestedTime),
-          type: 'video',
-          condition: acceptedRequest.symptoms,
-          status: 'confirmed',
-          duration: 30
-        };
-        setAppointments(prev => [...prev, newAppointment]);
-        
-        // Add to patients list (persist in localStorage)
-        const newPatient = {
-          id: Date.now(),
-          name: acceptedRequest.patientName,
-          age: acceptedRequest.age,
-          gender: 'N/A',
-          phone: 'N/A',
-          email: 'N/A',
-          condition: acceptedRequest.symptoms,
-          lastVisit: new Date(),
-          nextAppointment: acceptedRequest.requestedTime,
-          status: 'new',
-          bloodGroup: 'N/A',
-          emergencyContact: 'N/A'
-        };
-        
-        // Get existing patients from localStorage
-        const existingPatients = JSON.parse(localStorage.getItem('doctorPatients') || '[]');
-        
-        // Check if patient already exists
-        const patientExists = existingPatients.some(p => p.name === acceptedRequest.patientName);
-        
-        if (!patientExists) {
-          // Add new patient
-          const updatedPatients = [...existingPatients, newPatient];
-          localStorage.setItem('doctorPatients', JSON.stringify(updatedPatients));
-          
-          // Update recent patients in current view
-          setRecentPatients(prev => [newPatient, ...prev].slice(0, 3));
-        }
-        
-        // Update stats
-        setStats(prev => ({
-          ...prev,
-          todayAppointments: prev.todayAppointments + 1,
-          totalPatients: patientExists ? prev.totalPatients : prev.totalPatients + 1
-        }));
-      }
-      
-      // Remove from consultation requests and update localStorage
-      const updatedRequests = consultationRequests.filter(req => req.id !== requestId);
-      setConsultationRequests(updatedRequests);
-      localStorage.setItem('consultationRequests', JSON.stringify(updatedRequests));
-      
-      toast.success('Consultation request accepted and patient added to your list');
-    } catch (error) {
-      console.error('Error accepting consultation:', error);
-      toast.error('Failed to accept consultation request');
+      await consultationAPI.acceptConsultation(id);
+      toast.success('Consultation confirmed');
+      loadConsultations();
+      loadStats();
+    } catch (err) {
+      toast.error('Failed to accept consultation');
     }
   };
 
-  const handleDeclineConsultation = async (requestId) => {
+  const handleStartConsultation = (id) => {
+    navigate(`/consultation/room/${id}`);
+  };
+
+  const handleCancel = async (id) => {
+    if (!confirm('Cancel this consultation?')) return;
     try {
-      // Mock API call  
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Remove from consultation requests and update localStorage
-      const updatedRequests = consultationRequests.filter(req => req.id !== requestId);
-      setConsultationRequests(updatedRequests);
-      localStorage.setItem('consultationRequests', JSON.stringify(updatedRequests));
-      
-      toast.success('Consultation request declined');
-    } catch (error) {
-      console.error('Error declining consultation:', error);
-      toast.error('Failed to decline consultation request');
+      await consultationAPI.cancelConsultation(id, 'Cancelled by doctor');
+      toast.success('Consultation cancelled');
+      loadConsultations();
+      loadStats();
+    } catch (err) {
+      toast.error('Failed to cancel');
     }
   };
 
-  const handleStartConsultation = async (appointmentId) => {
-    try {
-      const appointment = appointments.find(apt => apt.id === appointmentId);
-      if (appointment) {
-        toast.success(`Starting consultation with ${appointment.patientName}`);
-        
-        // Navigate to the consultation room
-        navigate(`/consultation/room/${appointmentId}`);
-      }
-    } catch (error) {
-      console.error('Error starting consultation:', error);
-      toast.error('Failed to start consultation');
-    }
+  const canJoin = (c) => {
+    if (!['confirmed', 'in_progress', 'requested'].includes(c.status)) return false;
+    const now = new Date();
+    const scheduled = new Date(c.scheduledAt);
+    const start = new Date(scheduled.getTime() - 10 * 60 * 1000);
+    const end = new Date(scheduled.getTime() + (c.estimatedDuration || 30) * 60 * 1000);
+    return now >= start && now <= end;
   };
 
-  const handleOpenMedicalRecords = () => {
-    // Navigate to health records page for doctor to manage patient records
-    navigate('/health-records');
-  };
-
-  const handleNewPrescription = () => {
-    // Navigate to prescriptions page where doctor can create new prescriptions
-    navigate('/prescriptions');
-  };
-
-  const handleViewPatient = (patientId) => {
-    // Navigate to health records page with patient context
-    const patient = recentPatients.find(p => p.id === patientId);
-    if (patient) {
-      // For now, navigate to health records. In the future, this could be patient-specific
-      navigate('/health-records', { state: { patientId, patientName: patient.name } });
-    }
-  };
-
-  const formatTime = (date) => {
-    return date.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit',
-      hour12: true 
-    });
-  };
-
-  const formatDate = (date) => {
-    if (!date) return 'N/A';
-    const dateObj = date instanceof Date ? date : new Date(date);
-    if (isNaN(dateObj.getTime())) return 'N/A';
-    return dateObj.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric' 
-    });
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'stable': return 'text-green-600 bg-green-50';
-      case 'monitoring': return 'text-yellow-600 bg-yellow-50';
-      case 'improving': return 'text-blue-600 bg-blue-50';
-      case 'critical': return 'text-red-600 bg-red-50';
-      default: return 'text-gray-600 bg-gray-50';
-    }
-  };
-
-  const getUrgencyColor = (urgency) => {
-    switch (urgency) {
-      case 'high': return 'text-red-600 bg-red-50 border-red-200';
-      case 'medium': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-      case 'low': return 'text-green-600 bg-green-50 border-green-200';
-      default: return 'text-gray-600 bg-gray-50 border-gray-200';
-    }
-  };
-
-  const getConsultationTypeIcon = (type) => {
-    switch (type) {
-      case 'video': return <VideoCameraIcon className="h-4 w-4" />;
-      case 'phone': return <PhoneIcon className="h-4 w-4" />;
-      default: return <UserGroupIcon className="h-4 w-4" />;
-    }
+  const getStatusBadge = (status) => {
+    const colors = {
+      requested: 'bg-yellow-100 text-yellow-800',
+      confirmed: 'bg-blue-100 text-blue-800',
+      in_progress: 'bg-green-100 text-green-800',
+      completed: 'bg-gray-100 text-gray-800',
+      cancelled: 'bg-red-100 text-red-800',
+    };
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[status] || 'bg-gray-100 text-gray-800'}`}>
+        {status?.replace(/_/g, ' ').toUpperCase()}
+      </span>
+    );
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading doctor dashboard...</p>
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="flex items-center justify-center py-20">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Navbar />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Verification Status Banner */}
+
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Verification Banner */}
         {verificationStatus && verificationStatus.verificationStatus !== 'approved' && (
           <div className="mb-6">
             {verificationStatus.verificationStatus === 'not_submitted' && (
               <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg">
-                <div className="flex items-start">
-                  <ExclamationTriangleIcon className="h-6 w-6 text-yellow-400 mt-0.5" />
-                  <div className="ml-3 flex-1">
-                    <h3 className="text-sm font-medium text-yellow-800">
-                      Verification Required
-                    </h3>
-                    <div className="mt-2 text-sm text-yellow-700">
-                      <p>
-                        To start accepting consultations and become visible to patients, you need to verify your profile
-                        by providing your medical credentials and qualifications.
-                      </p>
-                    </div>
-                    <div className="mt-4">
-                      <button
-                        onClick={() => navigate('/doctor/verification')}
-                        className="btn btn-primary"
-                      >
-                        <DocumentCheckIcon className="h-5 w-5 mr-2" />
-                        Get Verified Now
-                      </button>
-                    </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-yellow-600 text-xl">⚠️</span>
+                  <div>
+                    <h3 className="font-medium text-yellow-800">Verification Required</h3>
+                    <p className="text-sm text-yellow-700 mt-1">Submit your credentials to start accepting consultations.</p>
+                    <button onClick={() => navigate('/doctor/verification')}
+                      className="mt-2 px-4 py-1.5 bg-yellow-600 text-white rounded-lg text-sm hover:bg-yellow-700">
+                      Get Verified
+                    </button>
                   </div>
                 </div>
               </div>
             )}
-
             {verificationStatus.verificationStatus === 'pending' && (
               <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg">
-                <div className="flex items-start">
-                  <ClockIcon className="h-6 w-6 text-blue-400 mt-0.5" />
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-blue-800">
-                      Verification Pending
-                    </h3>
-                    <div className="mt-2 text-sm text-blue-700">
-                      <p>
-                        Your verification request is being reviewed by our admin team. You'll be notified once it's approved.
-                      </p>
-                      <p className="mt-1 text-xs">
-                        Submitted on: {new Date(verificationStatus.verificationSubmittedAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                <p className="text-sm text-blue-800">⏳ <strong>Verification Pending</strong> — Your documents are being reviewed.</p>
               </div>
             )}
-
             {verificationStatus.verificationStatus === 'rejected' && (
               <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-lg">
-                <div className="flex items-start">
-                  <XCircleIcon className="h-6 w-6 text-red-400 mt-0.5" />
-                  <div className="ml-3 flex-1">
-                    <h3 className="text-sm font-medium text-red-800">
-                      Verification Rejected
-                    </h3>
-                    <div className="mt-2 text-sm text-red-700">
-                      <p>
-                        Unfortunately, your verification request was not approved.
-                      </p>
-                      {verificationStatus.verificationRejectionReason && (
-                        <p className="mt-2 font-medium">
-                          Reason: {verificationStatus.verificationRejectionReason}
-                        </p>
-                      )}
-                    </div>
-                    <div className="mt-4">
-                      <button
-                        onClick={() => navigate('/doctor/verification')}
-                        className="btn btn-primary"
-                      >
-                        Resubmit Verification
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                <p className="text-sm text-red-800">❌ <strong>Verification Rejected</strong> — {verificationStatus.verificationRejectionReason || 'Please resubmit.'}</p>
+                <button onClick={() => navigate('/doctor/verification')}
+                  className="mt-2 px-4 py-1.5 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700">
+                  Resubmit
+                </button>
               </div>
             )}
           </div>
         )}
 
-        {/* Verified Badge */}
         {verificationStatus?.verificationStatus === 'approved' && (
-          <div className="mb-6 bg-green-50 border-l-4 border-green-400 p-4 rounded-lg">
-            <div className="flex items-center">
-              <ShieldCheckIcon className="h-6 w-6 text-green-400" />
-              <div className="ml-3">
-                <p className="text-sm font-medium text-green-800">
-                  ✓ Verified Doctor - Your profile is visible to patients
-                </p>
-              </div>
-            </div>
+          <div className="mb-6 bg-green-50 border-l-4 border-green-400 p-3 rounded-lg">
+            <p className="text-sm text-green-800">✅ <strong>Verified Doctor</strong> — Your profile is visible to patients.</p>
           </div>
         )}
 
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Doctor Dashboard</h1>
-              <p className="text-lg text-gray-600">Welcome back, Dr. {user?.name}</p>
-            </div>
-            <div className="flex items-center space-x-4">
-              <button 
-                onClick={handleOpenMedicalRecords}
-                className="btn btn-outline"
-              >
-                <DocumentTextIcon className="h-5 w-5 mr-2" />
-                Medical Records
+          <h1 className="text-3xl font-bold text-foreground">Doctor Dashboard</h1>
+          <p className="text-muted-foreground">Welcome back, Dr. {user?.name}</p>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="bg-card rounded-xl border border-border p-5">
+            <p className="text-sm text-muted-foreground">Today</p>
+            <p className="text-3xl font-bold text-foreground">{stats?.todayAppointments || 0}</p>
+            <p className="text-xs text-blue-600">appointments</p>
+          </div>
+          <div className="bg-card rounded-xl border border-border p-5">
+            <p className="text-sm text-muted-foreground">Upcoming</p>
+            <p className="text-3xl font-bold text-foreground">{stats?.upcomingConsultations?.length || 0}</p>
+            <p className="text-xs text-green-600">scheduled</p>
+          </div>
+          <div className="bg-card rounded-xl border border-border p-5">
+            <p className="text-sm text-muted-foreground">Completed</p>
+            <p className="text-3xl font-bold text-foreground">{stats?.completedConsultations || 0}</p>
+            <p className="text-xs text-purple-600">total</p>
+          </div>
+          <div className="bg-card rounded-xl border border-border p-5">
+            <p className="text-sm text-muted-foreground">Total</p>
+            <p className="text-3xl font-bold text-foreground">{stats?.totalConsultations || 0}</p>
+            <p className="text-xs text-gray-500">all time</p>
+          </div>
+        </div>
+
+        {/* Consultations */}
+        <div className="bg-card rounded-xl border border-border">
+          {/* Tabs */}
+          <div className="flex items-center gap-2 p-4 border-b border-border">
+            <h2 className="text-lg font-semibold text-foreground mr-4">Consultations</h2>
+            {['upcoming', 'today', 'all'].map(f => (
+              <button key={f} onClick={() => setFilter(f)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                  filter === f ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent'
+                }`}>
+                {f.charAt(0).toUpperCase() + f.slice(1)}
               </button>
-              <button 
-                onClick={handleNewPrescription}
-                className="btn btn-primary"
-              >
-                <PlusIcon className="h-5 w-5 mr-2" />
-                New Prescription
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {/* Today's Appointments */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Today's Appointments</p>
-                <p className="text-3xl font-bold text-gray-900">{stats.todayAppointments}</p>
-                <p className="text-sm text-blue-600">Scheduled for today</p>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-full">
-                <CalendarDaysIcon className="h-8 w-8 text-blue-600" />
-              </div>
-            </div>
+            ))}
           </div>
 
-          {/* Total Patients */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Patients</p>
-                <p className="text-3xl font-bold text-gray-900">{stats.totalPatients}</p>
-                <p className="text-sm text-green-600">All time</p>
+          {/* List */}
+          <div className="p-4">
+            {consultations.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">No consultations found</p>
               </div>
-              <div className="p-3 bg-green-100 rounded-full">
-                <UserGroupIcon className="h-8 w-8 text-green-600" />
-              </div>
-            </div>
-          </div>
-
-          {/* Completed Consultations */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Completed This Month</p>
-                <p className="text-3xl font-bold text-gray-900">{stats.completedConsultations}</p>
-                <p className="text-sm text-purple-600">Successful consultations</p>
-              </div>
-              <div className="p-3 bg-purple-100 rounded-full">
-                <CheckCircleIcon className="h-8 w-8 text-purple-600" />
-              </div>
-            </div>
-          </div>
-
-          {/* Upcoming Appointments */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Upcoming Appointments</p>
-                <p className="text-3xl font-bold text-gray-900">{stats.upcomingAppointments}</p>
-                <p className="text-sm text-orange-600">Next 7 days</p>
-              </div>
-              <div className="p-3 bg-orange-100 rounded-full">
-                <ClockIcon className="h-8 w-8 text-orange-600" />
-              </div>
-            </div>
-          </div>
-
-          {/* Average Rating */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Average Rating</p>
-                <div className="flex items-center">
-                  <p className="text-3xl font-bold text-gray-900">{stats.averageRating}</p>
-                  <StarIcon className="h-6 w-6 text-yellow-400 ml-2" />
-                </div>
-                <p className="text-sm text-gray-500">{stats.totalReviews} reviews</p>
-              </div>
-              <div className="p-3 bg-yellow-100 rounded-full">
-                <HeartIcon className="h-8 w-8 text-yellow-600" />
-              </div>
-            </div>
-          </div>
-
-          {/* Consultation Requests */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">New Requests</p>
-                <p className="text-3xl font-bold text-gray-900">{consultationRequests.length}</p>
-                <p className="text-sm text-blue-600">Awaiting response</p>
-              </div>
-              <div className="p-3 bg-indigo-100 rounded-full">
-                <ChatBubbleLeftRightIcon className="h-8 w-8 text-indigo-600" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Verified Doctors on Platform */}
-        {verifiedDoctors.length > 0 && (
-          <div className="mb-8 bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">Verified Doctors on MediSync</h2>
-                <p className="text-sm text-gray-600 mt-1">Connect with other verified healthcare professionals</p>
-              </div>
-              <ShieldCheckIcon className="h-8 w-8 text-green-500" />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {verifiedDoctors.slice(0, 6).map((doctor) => (
-                <div key={doctor._id} className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
-                  <div className="flex items-start space-x-3">
-                    <div className="flex-shrink-0">
-                      <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center">
-                        <span className="text-xl font-semibold text-blue-600">
-                          {doctor.name.charAt(0)}
-                        </span>
+            ) : (
+              <div className="space-y-3">
+                {consultations.map(c => (
+                  <div key={c._id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-lg border border-border hover:bg-accent/50 transition gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold flex-shrink-0">
+                        {c.userId?.name?.charAt(0) || 'P'}
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-foreground">{c.userId?.name || 'Patient'}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(c.scheduledAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                          {' at '}
+                          {new Date(c.scheduledAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                        {c.chiefComplaint && <p className="text-sm text-muted-foreground mt-0.5">{c.chiefComplaint}</p>}
+                        {c.symptoms?.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {c.symptoms.map((s, i) => (
+                              <span key={i} className="px-2 py-0.5 bg-muted rounded text-xs text-muted-foreground">{s}</span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2">
-                        <h3 className="text-sm font-semibold text-gray-900 truncate">
-                          Dr. {doctor.name}
-                        </h3>
-                        <ShieldCheckIcon className="h-4 w-4 text-green-500 flex-shrink-0" />
-                      </div>
-                      <p className="text-xs text-gray-600 capitalize mt-1">
-                        {doctor.specialty.replace('_', ' ')}
-                      </p>
-                      {doctor.experience > 0 && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          {doctor.experience} years experience
-                        </p>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {getStatusBadge(c.status)}
+                      {c.status === 'requested' && (
+                        <button onClick={() => handleAccept(c._id)}
+                          className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
+                          Accept
+                        </button>
                       )}
-                      {doctor.rating?.average > 0 && (
-                        <div className="flex items-center mt-2">
-                          <StarIcon className="h-3 w-3 text-yellow-400" />
-                          <span className="text-xs text-gray-600 ml-1">
-                            {doctor.rating.average.toFixed(1)} ({doctor.rating.reviewCount} reviews)
-                          </span>
-                        </div>
+                      {canJoin(c) && (
+                        <button onClick={() => handleStartConsultation(c._id)}
+                          className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+                          Join Video
+                        </button>
                       )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {verifiedDoctors.length > 6 && (
-              <div className="mt-4 text-center">
-                <p className="text-sm text-gray-600">
-                  + {verifiedDoctors.length - 6} more verified doctors on the platform
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Today's Schedule */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-gray-900">Today's Schedule</h3>
-              <Link to="/consultations" className="text-primary-600 hover:text-primary-700 text-sm font-medium">
-                View All
-              </Link>
-            </div>
-            
-            <div className="space-y-4">
-              {appointments.map((appointment) => (
-                <div key={appointment.id} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2">
-                        <h4 className="font-medium text-gray-900">{appointment.patientName}</h4>
-                        <span className="text-sm text-gray-500">({appointment.patientAge}y)</span>
-                        <div className="flex items-center text-gray-400">
-                          {getConsultationTypeIcon(appointment.type)}
-                        </div>
-                      </div>
-                      <p className="text-sm text-gray-600">{appointment.condition}</p>
-                      <p className="text-sm text-gray-500">
-                        {appointment.time} • {appointment.duration} mins
-                      </p>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        appointment.status === 'confirmed' 
-                          ? 'bg-green-100 text-green-800' 
-                          : appointment.status === 'ongoing'
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {appointment.status}
-                      </span>
-                      <button 
-                        onClick={() => handleStartConsultation(appointment.id)}
-                        className={`btn btn-sm ${
-                          appointment.status === 'ongoing' 
-                            ? 'btn-secondary' 
-                            : 'btn-primary'
-                        }`}
-                      >
-                        {appointment.status === 'ongoing' ? 'Resume' : 'Start'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Recent Patients */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-gray-900">Recent Patients</h3>
-              <Link to="/patients" className="text-primary-600 hover:text-primary-700 text-sm font-medium">
-                View All Patients
-              </Link>
-            </div>
-            
-            <div className="space-y-4">
-              {recentPatients.map((patient) => (
-                <div 
-                  key={patient.id} 
-                  onClick={() => handleViewPatient(patient.id)}
-                  className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2">
-                      <h4 className="font-medium text-gray-900">{patient.name}</h4>
-                      <span className="text-sm text-gray-500">({patient.age}y)</span>
-                    </div>
-                    <p className="text-sm text-gray-600">{patient.condition}</p>
-                    <p className="text-xs text-gray-500">
-                      Last visit: {formatDate(patient.lastVisit)}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(patient.status)}`}>
-                      {patient.status}
-                    </span>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Next: {formatDate(patient.nextAppointment)}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Consultation Requests */}
-        {consultationRequests.length > 0 && (
-          <div className="mt-8">
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-semibold text-gray-900">New Consultation Requests</h3>
-                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-                  {consultationRequests.length} pending
-                </span>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {consultationRequests.map((request) => (
-                  <div key={request.id} className={`border rounded-lg p-4 ${getUrgencyColor(request.urgency)}`}>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <h4 className="font-medium text-gray-900">{request.patientName}</h4>
-                          <span className="text-sm text-gray-500">({request.age}y)</span>
-                          <span className={`px-2 py-1 text-xs rounded-full ${getUrgencyColor(request.urgency)}`}>
-                            {request.urgency} priority
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-700 mb-2">
-                          <strong>Symptoms:</strong> {request.symptoms}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          Requested for: {formatTime(request.requestedTime)}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          Submitted {formatTime(request.requestedAt)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex space-x-2 mt-4">
-                      <button
-                        onClick={() => handleAcceptConsultation(request.id)}
-                        className="flex-1 px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700"
-                      >
-                        Accept
-                      </button>
-                      <button
-                        onClick={() => handleDeclineConsultation(request.id)}
-                        className="flex-1 px-3 py-2 bg-gray-600 text-white text-sm rounded hover:bg-gray-700"
-                      >
-                        Decline
-                      </button>
+                      {['requested', 'confirmed'].includes(c.status) && (
+                        <button onClick={() => handleCancel(c._id)}
+                          className="px-3 py-1.5 border border-red-300 text-red-600 rounded-lg text-sm hover:bg-red-50">
+                          Cancel
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
+            )}
           </div>
-        )}
+        </div>
+
+        {/* Quick Links */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+          <Link to="/doctor/patients" className="bg-card rounded-xl border border-border p-4 text-center hover:bg-accent transition">
+            <span className="text-2xl">👥</span>
+            <p className="text-sm font-medium text-foreground mt-2">My Patients</p>
+          </Link>
+          <Link to="/health-records" className="bg-card rounded-xl border border-border p-4 text-center hover:bg-accent transition">
+            <span className="text-2xl">📋</span>
+            <p className="text-sm font-medium text-foreground mt-2">Medical Records</p>
+          </Link>
+          <Link to="/prescriptions" className="bg-card rounded-xl border border-border p-4 text-center hover:bg-accent transition">
+            <span className="text-2xl">💊</span>
+            <p className="text-sm font-medium text-foreground mt-2">Prescriptions</p>
+          </Link>
+          <Link to="/doctor/verification" className="bg-card rounded-xl border border-border p-4 text-center hover:bg-accent transition">
+            <span className="text-2xl">🛡️</span>
+            <p className="text-sm font-medium text-foreground mt-2">Verification</p>
+          </Link>
+        </div>
       </div>
     </div>
   );

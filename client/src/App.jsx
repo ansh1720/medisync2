@@ -12,7 +12,10 @@ import DoctorDashboard from './pages/DoctorDashboard';
 import RiskAssessment from './pages/RiskAssessment';
 import EquipmentReadings from './pages/EquipmentReadings';
 import HospitalLocator from './pages/HospitalLocator';
-import DoctorConsultation from './pages/DoctorConsultation';
+import DoctorDiscovery from './pages/DoctorDiscovery';
+import BookingPage from './pages/BookingPage';
+import ConsultationRoom from './pages/ConsultationRoom';
+import ConsultationHistory from './pages/ConsultationHistory';
 import CommunityForum from './pages/CommunityForum';
 import HealthNews from './pages/HealthNews';
 import UserProfile from './pages/UserProfile';
@@ -24,7 +27,6 @@ import Prescriptions from './pages/Prescriptions';
 import DoctorPatients from './pages/DoctorPatients';
 import DoctorVerification from './pages/DoctorVerification';
 import AdminVerifications from './pages/AdminVerifications';
-import ConsultationRoom from './pages/ConsultationRoom';
 
 function App() {
   return (
@@ -128,7 +130,23 @@ function App() {
               path="/consultations"
               element={
                 <ProtectedRoute>
-                  <DoctorConsultation />
+                  <DoctorDiscovery />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/consultation/book/:doctorId"
+              element={
+                <ProtectedRoute>
+                  <BookingPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/consultation/history"
+              element={
+                <ProtectedRoute>
+                  <ConsultationHistory />
                 </ProtectedRoute>
               }
             />

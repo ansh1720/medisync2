@@ -13,7 +13,8 @@ function Navbar() {
       { name: 'Dashboard', href: getRoleDashboard(user?.role || 'user') },
       { name: 'Diseases', href: '/diseases' },
       { name: 'Risk Assessment', href: '/risk-assessment' },
-      { name: 'Consultation', href: '/consultations' },
+      { name: 'Find Doctors', href: '/consultations' },
+      { name: 'My Consultations', href: '/consultation/history' },
       { name: 'Hospitals', href: '/hospitals' },
       { name: 'Health News', href: '/news' },
     ];

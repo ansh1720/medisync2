@@ -91,21 +91,27 @@ export const hospitalAPI = {
 
 // Consultation API
 export const consultationAPI = {
-  getAvailableDoctors: (params) => api.get('/consultation/doctors', { params }),
+  // Doctor discovery
+  getDoctors: (params) => api.get('/consultation/doctors', { params }),
+  getDoctorProfile: (doctorId) => api.get(`/consultation/doctors/${doctorId}`),
+  getAvailableSlots: (doctorId, date) => api.get(`/consultation/doctors/${doctorId}/slots`, { params: { date } }),
+
+  // Booking & patient
   bookConsultation: (data) => api.post('/consultation/book', data),
-  getConsultations: () => api.get('/consultation/my-consultations'),
-  rescheduleConsultation: (id, data) => api.put(`/consultation/${id}/reschedule`, data),
-  cancelConsultation: (id) => api.delete(`/consultation/${id}`),
-  
-  // Doctor-specific endpoints
-  getDoctorSchedule: (params) => api.get('/consultation/doctor/schedule', { params }),
-  getDoctorPatients: () => api.get('/consultation/doctor/patients'),
-  getUpcomingConsultations: (params) => api.get('/consultation/upcoming', { params }),
-  getConsultationStats: (params) => api.get('/consultation/stats/overview', { params }),
-  completeConsultation: (id, data) => api.put(`/consultation/${id}/complete`, data),
-  addConsultationNotes: (id, data) => api.post(`/consultation/${id}/add-notes`, data),
-  addPrescription: (id, data) => api.post(`/consultation/${id}/prescription`, data),
+  getMyConsultations: (params) => api.get('/consultation/my-consultations', { params }),
+  getConsultation: (id) => api.get(`/consultation/${id}`),
+  cancelConsultation: (id, reason) => api.post(`/consultation/${id}/cancel`, { reason }),
+  payConsultation: (id, method) => api.post(`/consultation/${id}/pay`, { method }),
+  addFeedback: (id, data) => api.post(`/consultation/${id}/feedback`, data),
+  updatePreConsultation: (id, data) => api.put(`/consultation/${id}/pre-consultation`, data),
   joinConsultation: (id) => api.post(`/consultation/${id}/join`),
+
+  // Doctor-specific
+  getDoctorConsultations: (params) => api.get('/consultation/doctor/consultations', { params }),
+  getDoctorStats: () => api.get('/consultation/doctor/stats'),
+  acceptConsultation: (id) => api.post(`/consultation/${id}/accept`),
+  completeConsultation: (id, data) => api.post(`/consultation/${id}/complete`, data),
+  addPrescription: (id, data) => api.post(`/consultation/${id}/prescription`, data),
 };
 
 // Equipment API

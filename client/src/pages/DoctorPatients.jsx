@@ -29,15 +29,27 @@ function DoctorPatients() {
     try {
       setIsLoading(true);
       
-      // Load patients from API
-      const response = await consultationAPI.getDoctorPatients();
+      // Load patients from completed consultations
+      const response = await consultationAPI.getDoctorConsultations({ status: 'completed' });
       
-      if (response.data.success) {
-        const apiPatients = response.data.data.patients.map(patient => ({
-          ...patient,
-          lastVisit: new Date(patient.lastVisit),
-          nextAppointment: patient.nextAppointment ? new Date(patient.nextAppointment) : null
-        }));
+      if (response.data.success && response.data.data) {
+        // Extract unique patients from completed consultations
+        const patientMap = {};
+        response.data.data.forEach(c => {
+          const p = c.userId;
+          if (p && !patientMap[p._id]) {
+            patientMap[p._id] = {
+              id: p._id,
+              name: p.name || 'Patient',
+              email: p.email || '',
+              phone: p.phone || '',
+              condition: c.chiefComplaint || c.diagnosis || 'Consultation',
+              lastVisit: new Date(c.scheduledAt),
+              status: 'stable'
+            };
+          }
+        });
+        const apiPatients = Object.values(patientMap);
         
         setPatients(apiPatients);
         setIsLoading(false);
