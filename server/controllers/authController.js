@@ -302,6 +302,131 @@ const changePassword = async (req, res, next) => {
 };
 
 /**
+ * Forgot password - generate OTP
+ * @route POST /api/auth/forgot-password
+ */
+const forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide your email address'
+      });
+    }
+
+    const user = await User.findByEmail(email);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'No account found with this email address'
+      });
+    }
+
+    if (!user.isActive) {
+      return res.status(401).json({
+        success: false,
+        message: 'Account is deactivated. Please contact support.'
+      });
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Store OTP with 10-minute expiry
+    user.resetPasswordOTP = otp;
+    user.resetPasswordExpire = new Date(Date.now() + 10 * 60 * 1000);
+    await user.save();
+
+    console.log(`[Password Reset] OTP for ${email}: ${otp}`);
+
+    res.json({
+      success: true,
+      message: 'Password reset OTP has been generated',
+      data: {
+        otp, // In production, remove this and send via email/SMS
+        expiresIn: '10 minutes'
+      }
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Reset password using OTP
+ * @route POST /api/auth/reset-password
+ */
+const resetPassword = async (req, res, next) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide email, OTP, and new password'
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters long'
+      });
+    }
+
+    const user = await User.findByEmail(email);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'No account found with this email address'
+      });
+    }
+
+    // Check OTP validity
+    if (!user.resetPasswordOTP || !user.resetPasswordExpire) {
+      return res.status(400).json({
+        success: false,
+        message: 'No password reset request found. Please request a new OTP.'
+      });
+    }
+
+    if (new Date() > user.resetPasswordExpire) {
+      user.resetPasswordOTP = null;
+      user.resetPasswordExpire = null;
+      await user.save();
+      return res.status(400).json({
+        success: false,
+        message: 'OTP has expired. Please request a new one.'
+      });
+    }
+
+    if (user.resetPasswordOTP !== otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid OTP. Please check and try again.'
+      });
+    }
+
+    // Reset password
+    user.password = newPassword;
+    user.resetPasswordOTP = null;
+    user.resetPasswordExpire = null;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Password has been reset successfully. You can now login with your new password.'
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * Logout user (client handles token removal)
  * @route POST /api/auth/logout
  */
@@ -336,6 +461,8 @@ module.exports = {
   getProfile,
   updateProfile,
   changePassword,
+  forgotPassword,
+  resetPassword,
   logout,
   verifyToken
 };

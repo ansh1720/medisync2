@@ -75,6 +75,36 @@ router.post('/register', registerValidation, authController.register);
 router.post('/login', loginValidation, authController.login);
 
 /**
+ * @route   POST /api/auth/forgot-password
+ * @desc    Generate OTP for password reset
+ * @access  Public
+ */
+router.post('/forgot-password', [
+  body('email')
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Please provide a valid email')
+], authController.forgotPassword);
+
+/**
+ * @route   POST /api/auth/reset-password
+ * @desc    Reset password using OTP
+ * @access  Public
+ */
+router.post('/reset-password', [
+  body('email')
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Please provide a valid email'),
+  body('otp')
+    .isLength({ min: 6, max: 6 })
+    .withMessage('OTP must be 6 digits'),
+  body('newPassword')
+    .isLength({ min: 6 })
+    .withMessage('New password must be at least 6 characters')
+], authController.resetPassword);
+
+/**
  * @route   GET /api/auth/profile
  * @desc    Get current user profile
  * @access  Private

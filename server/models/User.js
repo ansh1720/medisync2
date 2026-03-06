@@ -62,6 +62,14 @@ const userSchema = new mongoose.Schema({
     type: String, // URL to image
     default: null
   },
+  resetPasswordOTP: {
+    type: String,
+    default: null
+  },
+  resetPasswordExpire: {
+    type: Date,
+    default: null
+  },
   preferences: {
     notifications: {
       email: {
