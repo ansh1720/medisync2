@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { consultationAPI, verificationAPI } from '../utils/api';
@@ -13,14 +13,10 @@ function DoctorDashboard() {
   const [consultations, setConsultations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [verificationStatus, setVerificationStatus] = useState(null);
-  const [filter, setFilter] = useState('upcoming'); // upcoming | today | all
-  const hasLoaded = useRef(false);
+  const [filter, setFilter] = useState('all'); // all | upcoming | today | completed
 
   useEffect(() => {
-    if (!hasLoaded.current) {
-      hasLoaded.current = true;
-      loadData();
-    }
+    loadData();
   }, []);
 
   useEffect(() => {
@@ -49,7 +45,12 @@ function DoctorDashboard() {
         params.status = 'requested,confirmed';
       } else if (filter === 'today') {
         params.date = new Date().toISOString().split('T')[0];
+      } else if (filter === 'in_progress') {
+        params.status = 'in_progress';
+      } else if (filter === 'completed') {
+        params.status = 'completed';
       }
+      // 'all' sends no status filter
       const res = await consultationAPI.getDoctorConsultations(params);
       const list = Array.isArray(res.data?.data) ? res.data.data : [];
       setConsultations(list);
@@ -206,12 +207,12 @@ function DoctorDashboard() {
           {/* Tabs */}
           <div className="flex items-center gap-2 p-4 border-b border-border">
             <h2 className="text-lg font-semibold text-foreground mr-4">Consultations</h2>
-            {['upcoming', 'today', 'all'].map(f => (
-              <button key={f} onClick={() => setFilter(f)}
+            {[['all', 'All'], ['upcoming', 'Upcoming'], ['today', 'Today'], ['in_progress', 'In Progress'], ['completed', 'Completed']].map(([key, label]) => (
+              <button key={key} onClick={() => setFilter(key)}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                  filter === f ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent'
+                  filter === key ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent'
                 }`}>
-                {f.charAt(0).toUpperCase() + f.slice(1)}
+                {label}
               </button>
             ))}
           </div>
@@ -243,6 +244,13 @@ function DoctorDashboard() {
                             {c.symptoms.map((s, i) => (
                               <span key={i} className="px-2 py-0.5 bg-muted rounded text-xs text-muted-foreground">{s}</span>
                             ))}
+                          </div>
+                        )}
+                        {c.feedback?.rating && (
+                          <div className="flex items-center gap-1 mt-1">
+                            <span className="text-xs text-muted-foreground">Patient review:</span>
+                            <span className="text-yellow-500">{'★'.repeat(c.feedback.rating)}{'☆'.repeat(5 - c.feedback.rating)}</span>
+                            {c.feedback.comment && <span className="text-xs text-muted-foreground ml-1">— {c.feedback.comment}</span>}
                           </div>
                         )}
                       </div>
