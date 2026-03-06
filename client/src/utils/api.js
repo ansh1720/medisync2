@@ -105,6 +105,10 @@ export const consultationAPI = {
   addFeedback: (id, data) => api.post(`/consultation/${id}/feedback`, data),
   updatePreConsultation: (id, data) => api.put(`/consultation/${id}/pre-consultation`, data),
   joinConsultation: (id) => api.post(`/consultation/${id}/join`),
+  uploadDocuments: (id, formData) => api.post(`/consultation/${id}/documents`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 120000 // 2 min for file uploads
+  }),
 
   // Doctor-specific
   getDoctorConsultations: (params) => api.get('/consultation/doctor/consultations', { params }),

@@ -40,6 +40,8 @@ function ConsultationRoom() {
   const [newMessage, setNewMessage] = useState('');
   const [showChat, setShowChat] = useState(false);
   const [callEnded, setCallEnded] = useState(false);
+  const chatFileRef = useRef(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
 
   // Doctor-only state for prescription
   const [showPrescription, setShowPrescription] = useState(false);
@@ -295,6 +297,46 @@ function ConsultationRoom() {
     setNewMessage('');
   };
 
+  const sendFile = async (file) => {
+    if (!file || !socketRef.current) return;
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('File too large. Max 10MB.');
+      return;
+    }
+    setUploadingFile(true);
+    try {
+      // Upload to server
+      const formData = new FormData();
+      formData.append('files', file);
+      const res = await consultationAPI.uploadDocuments(consultationId, formData);
+      const uploaded = res.data?.data?.[0];
+
+      // Send file info via chat socket
+      const msg = {
+        id: Date.now(),
+        text: '',
+        senderName: user?.name,
+        senderId: user?.userId || user?._id,
+        timestamp: new Date().toISOString(),
+        file: {
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          url: uploaded?.url || null
+        }
+      };
+      socketRef.current.emit('chat_message', { consultationId, message: msg });
+      setMessages(prev => [...prev, msg]);
+      toast.success(`Sent: ${file.name}`);
+    } catch (err) {
+      console.error('File send error:', err);
+      toast.error('Failed to send file');
+    } finally {
+      setUploadingFile(false);
+      if (chatFileRef.current) chatFileRef.current.value = '';
+    }
+  };
+
   const endCall = async () => {
     socketRef.current?.emit('end_call', { consultationId });
     cleanupMedia();
@@ -474,9 +516,9 @@ function ConsultationRoom() {
 
   // ─── Main Video UI ───
   return (
-    <div className="h-screen bg-gray-900 flex flex-col">
+    <div className="h-dvh max-h-dvh bg-gray-900 flex flex-col overflow-hidden" style={{ height: '100dvh' }}>
       {/* Top bar */}
-      <div className="bg-gray-800 px-4 py-3 flex items-center justify-between">
+      <div className="bg-gray-800 px-4 py-2 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
           <div className={`w-2.5 h-2.5 rounded-full ${connected ? 'bg-green-400' : 'bg-red-400'}`} />
           <span className="text-white font-medium text-sm">
@@ -486,14 +528,14 @@ function ConsultationRoom() {
           </span>
         </div>
         <div className="text-gray-400 text-sm">
-          {remoteConnected ? '🟢 Connected' : '⏳ Waiting for participant...'}
+          {remoteConnected ? '🟢 Connected' : '⏳ Waiting...'}
         </div>
       </div>
 
       {/* Video area */}
-      <div className="flex-1 relative">
+      <div className="flex-1 relative min-h-0 overflow-hidden">
         {/* Remote video (large) */}
-        <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
+        <video ref={remoteVideoRef} autoPlay playsInline className="absolute inset-0 w-full h-full object-cover" />
 
         {!remoteConnected && (
           <div className="absolute inset-0 flex items-center justify-center">
@@ -518,7 +560,7 @@ function ConsultationRoom() {
       </div>
 
       {/* Controls */}
-      <div className="bg-gray-800 px-4 py-4 flex items-center justify-center gap-4">
+      <div className="bg-gray-800 px-4 py-3 flex items-center justify-center gap-4 flex-shrink-0">
         <button onClick={toggleMute}
           className={`p-3 rounded-full transition ${isMuted ? 'bg-red-500 text-white' : 'bg-gray-600 text-white hover:bg-gray-500'}`}
           title={isMuted ? 'Unmute' : 'Mute'}>
@@ -555,12 +597,46 @@ function ConsultationRoom() {
                     : 'bg-gray-700 text-gray-200'
                 }`}>
                   <p className="text-xs opacity-70 mb-1">{msg.senderName}</p>
-                  <p>{msg.text}</p>
+                  {msg.file ? (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{msg.file.type?.startsWith('image/') ? '🖼️' : '📄'}</span>
+                        <span className="truncate">{msg.file.name}</span>
+                      </div>
+                      <p className="text-xs opacity-70">{(msg.file.size / 1024).toFixed(0)} KB</p>
+                      {msg.file.url && msg.file.type?.startsWith('image/') && (
+                        <img src={msg.file.url} alt={msg.file.name} className="max-w-full rounded mt-1 cursor-pointer"
+                          onClick={() => window.open(msg.file.url, '_blank')} />
+                      )}
+                      {msg.file.url && !msg.file.type?.startsWith('image/') && (
+                        <a href={msg.file.url} download={msg.file.name}
+                          className="inline-block mt-1 px-2 py-1 bg-white/20 rounded text-xs hover:bg-white/30 transition">
+                          Download
+                        </a>
+                      )}
+                    </div>
+                  ) : (
+                    <p>{msg.text}</p>
+                  )}
                 </div>
               </div>
             ))}
           </div>
           <div className="p-3 border-t border-gray-700 flex gap-2">
+            <input
+              ref={chatFileRef}
+              type="file"
+              accept="image/*,.pdf,.doc,.docx,.txt"
+              className="hidden"
+              onChange={(e) => { if (e.target.files[0]) sendFile(e.target.files[0]); }}
+            />
+            <button
+              onClick={() => chatFileRef.current?.click()}
+              disabled={uploadingFile}
+              className="px-2 py-2 bg-gray-600 text-white rounded-lg text-sm hover:bg-gray-500 disabled:opacity-50 flex-shrink-0"
+              title="Attach file">
+              {uploadingFile ? '⏳' : '📎'}
+            </button>
             <input
               value={newMessage}
               onChange={e => setNewMessage(e.target.value)}

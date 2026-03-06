@@ -22,6 +22,7 @@ function BookingPage() {
   const [symptoms, setSymptoms] = useState('');
   const [chiefComplaint, setChiefComplaint] = useState('');
   const [additionalNotes, setAdditionalNotes] = useState('');
+  const [attachedFiles, setAttachedFiles] = useState([]);
 
   // Payment
   const [paymentMethod, setPaymentMethod] = useState('credit_card');
@@ -85,6 +86,19 @@ function BookingPage() {
       });
 
       const consultationId = res.data.data._id;
+
+      // Upload attached files if any
+      if (attachedFiles.length > 0) {
+        const formData = new FormData();
+        attachedFiles.forEach(file => formData.append('files', file));
+        try {
+          await consultationAPI.uploadDocuments(consultationId, formData);
+          toast.success(`${attachedFiles.length} file(s) uploaded`);
+        } catch (uploadErr) {
+          console.error('File upload failed:', uploadErr);
+          toast.error('Booking created but file upload failed. You can upload later.');
+        }
+      }
 
       // If there's a fee, simulate payment
       if (doctor?.consultationFee?.amount > 0) {
@@ -266,6 +280,63 @@ function BookingPage() {
                   className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-foreground focus:ring-2 focus:ring-primary resize-none"
                 />
               </div>
+
+              {/* File Attachments */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Attach Reports / X-Rays / Documents</label>
+                <p className="text-xs text-muted-foreground mb-2">Upload images, PDFs, or documents (max 5 files, 10MB each)</p>
+                <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary transition cursor-pointer"
+                  onClick={() => document.getElementById('file-upload').click()}>
+                  <input
+                    id="file-upload"
+                    type="file"
+                    multiple
+                    accept="image/*,.pdf,.doc,.docx,.txt"
+                    className="hidden"
+                    onChange={(e) => {
+                      const newFiles = Array.from(e.target.files);
+                      const totalFiles = attachedFiles.length + newFiles.length;
+                      if (totalFiles > 5) {
+                        toast.error('Maximum 5 files allowed');
+                        return;
+                      }
+                      const oversized = newFiles.find(f => f.size > 10 * 1024 * 1024);
+                      if (oversized) {
+                        toast.error(`File "${oversized.name}" exceeds 10MB limit`);
+                        return;
+                      }
+                      setAttachedFiles(prev => [...prev, ...newFiles]);
+                      e.target.value = '';
+                    }}
+                  />
+                  <div className="text-3xl mb-2">📎</div>
+                  <p className="text-sm text-muted-foreground">Click to browse or drop files here</p>
+                  <p className="text-xs text-muted-foreground mt-1">Images, PDFs, Documents</p>
+                </div>
+
+                {/* File List */}
+                {attachedFiles.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {attachedFiles.map((file, idx) => (
+                      <div key={idx} className="flex items-center justify-between bg-muted rounded-lg px-3 py-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-lg flex-shrink-0">
+                            {file.type.startsWith('image/') ? '🖼️' : file.type === 'application/pdf' ? '📄' : '📋'}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">{file.name}</p>
+                            <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(0)} KB</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setAttachedFiles(prev => prev.filter((_, i) => i !== idx)); }}
+                          className="text-red-500 hover:text-red-700 p-1 flex-shrink-0"
+                        >✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="flex justify-between mt-6">
@@ -313,6 +384,12 @@ function BookingPage() {
                 <span className="text-muted-foreground">Main Concern</span>
                 <span className="text-foreground">{chiefComplaint}</span>
               </div>
+              {attachedFiles.length > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Attached Files</span>
+                  <span className="text-foreground">{attachedFiles.length} file(s)</span>
+                </div>
+              )}
               {doctor?.consultationFee?.amount > 0 && (
                 <div className="flex justify-between border-t border-border pt-2 mt-2">
                   <span className="font-medium text-foreground">Fee</span>

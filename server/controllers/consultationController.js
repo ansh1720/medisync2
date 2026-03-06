@@ -571,3 +571,54 @@ exports.acceptConsultation = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to accept consultation' });
   }
 };
+
+// ────────────────────────────────────────────
+// 17. POST /:id/documents – upload documents (reports, x-rays, etc.)
+// ────────────────────────────────────────────
+exports.uploadDocuments = async (req, res) => {
+  try {
+    const consultation = await Consultation.findById(req.params.id);
+    if (!consultation) return res.status(404).json({ success: false, message: 'Consultation not found' });
+
+    // Both patient and doctor can upload
+    const isPatient = consultation.userId.toString() === req.user.userId;
+    const doctor = await Doctor.findOne({ userRef: req.user.userId });
+    const isDoctor = doctor && consultation.doctorId.toString() === doctor._id.toString();
+    if (!isPatient && !isDoctor) {
+      return res.status(403).json({ success: false, message: 'Not authorized for this consultation' });
+    }
+
+    if (['cancelled'].includes(consultation.status)) {
+      return res.status(400).json({ success: false, message: 'Cannot upload to a cancelled consultation' });
+    }
+
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ success: false, message: 'No files uploaded' });
+    }
+
+    const newDocs = req.files.map(file => {
+      // Store as base64 data URL
+      const base64 = file.buffer.toString('base64');
+      const dataUrl = `data:${file.mimetype};base64,${base64}`;
+      const ext = file.originalname.split('.').pop().toLowerCase();
+      let fileType = 'other';
+      if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(ext)) fileType = 'image';
+      else if (['pdf', 'doc', 'docx', 'txt'].includes(ext)) fileType = 'report';
+
+      return {
+        name: file.originalname,
+        url: dataUrl,
+        fileType,
+        uploadedAt: new Date()
+      };
+    });
+
+    consultation.documents.push(...newDocs);
+    await consultation.save();
+
+    res.json({ success: true, data: newDocs, message: `${newDocs.length} file(s) uploaded successfully` });
+  } catch (err) {
+    console.error('uploadDocuments error:', err);
+    res.status(500).json({ success: false, message: 'Failed to upload documents' });
+  }
+};

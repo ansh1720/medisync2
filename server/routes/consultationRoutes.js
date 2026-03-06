@@ -5,8 +5,23 @@
 
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
 const { verifyToken, requireRole } = require('../middlewares/auth');
 const c = require('../controllers/consultationController');
+
+// Multer config for document uploads (max 5 files, 10MB each)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp',
+      'application/pdf', 'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain'];
+    if (allowed.includes(file.mimetype)) cb(null, true);
+    else cb(new Error('File type not allowed. Use images, PDFs, or documents.'));
+  }
+});
 
 // All routes require authentication
 router.use(verifyToken);
@@ -36,5 +51,6 @@ router.post('/:id/cancel',          c.cancelConsultation);
 router.post('/:id/pay',             c.payConsultation);
 router.post('/:id/feedback',        c.addFeedback);
 router.put('/:id/pre-consultation', c.updatePreConsultation);
+router.post('/:id/documents',       upload.array('files', 5), c.uploadDocuments);
 
 module.exports = router;
