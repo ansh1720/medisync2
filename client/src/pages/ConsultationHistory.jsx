@@ -83,12 +83,7 @@ function ConsultationHistory() {
   };
 
   const canJoin = (c) => {
-    if (!['confirmed', 'in_progress', 'requested'].includes(c.status)) return false;
-    const now = new Date();
-    const scheduled = new Date(c.scheduledAt);
-    const start = new Date(scheduled.getTime() - 10 * 60 * 1000);
-    const end = new Date(scheduled.getTime() + (c.estimatedDuration || 30) * 60 * 1000);
-    return now >= start && now <= end;
+    return ['confirmed', 'in_progress', 'requested'].includes(c.status);
   };
 
   return (

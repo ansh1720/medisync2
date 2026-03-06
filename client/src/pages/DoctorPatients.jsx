@@ -30,7 +30,7 @@ function DoctorPatients() {
       setIsLoading(true);
       
       // Load patients from completed consultations
-      const response = await consultationAPI.getDoctorConsultations({ status: 'completed' });
+      const response = await consultationAPI.getDoctorConsultations({});
       
       if (response.data.success && response.data.data) {
         // Extract unique patients from completed consultations

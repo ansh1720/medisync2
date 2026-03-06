@@ -83,8 +83,11 @@ exports.getAvailableSlots = async (req, res) => {
     const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const dayOfWeek = dayNames[date.getDay()];
 
+    // If doctor has availability configured for this day, use it; otherwise default 09:00-17:00
     const dayAvailability = doctor.availability.find(a => a.dayOfWeek === dayOfWeek);
-    if (!dayAvailability) return res.json({ success: true, data: [] });
+    const timeSlots = (dayAvailability && dayAvailability.timeSlots.length > 0)
+      ? dayAvailability.timeSlots
+      : [{ startTime: '09:00', endTime: '17:00', isAvailable: true }];
 
     // Get all booked slots for that day
     const startOfDay = new Date(date); startOfDay.setHours(0, 0, 0, 0);
@@ -103,7 +106,7 @@ exports.getAvailableSlots = async (req, res) => {
 
     const duration = doctor.preferences?.consultationDuration || 30;
     const slots = [];
-    for (const slot of dayAvailability.timeSlots) {
+    for (const slot of timeSlots) {
       if (!slot.isAvailable) continue;
       const [sh, sm] = slot.startTime.split(':').map(Number);
       const [eh, em] = slot.endTime.split(':').map(Number);
@@ -150,7 +153,7 @@ exports.bookConsultation = async (req, res) => {
         currency: doctor.consultationFee?.currency || 'USD',
         status: doctor.consultationFee?.amount ? 'pending' : 'paid'
       },
-      status: 'confirmed' // auto-confirm for now
+      status: 'requested' // doctor must accept
     });
 
     const populated = await Consultation.findById(consultation._id)
@@ -178,7 +181,10 @@ exports.getMyConsultations = async (req, res) => {
   try {
     const { status, page = 1, limit = 20 } = req.query;
     const filter = { userId: req.user.userId };
-    if (status) filter.status = status;
+    if (status) {
+      const statuses = status.split(',').map(s => s.trim());
+      filter.status = statuses.length > 1 ? { $in: statuses } : statuses[0];
+    }
 
     const total = await Consultation.countDocuments(filter);
     const consultations = await Consultation.find(filter)
@@ -205,7 +211,10 @@ exports.getDoctorConsultations = async (req, res) => {
 
     const { status, date, page = 1, limit = 20 } = req.query;
     const filter = { doctorId: doctor._id };
-    if (status) filter.status = status;
+    if (status) {
+      const statuses = status.split(',').map(s => s.trim());
+      filter.status = statuses.length > 1 ? { $in: statuses } : statuses[0];
+    }
     if (date) {
       const d = new Date(date);
       const start = new Date(d); start.setHours(0, 0, 0, 0);

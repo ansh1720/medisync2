@@ -79,14 +79,37 @@ function ConsultationRoom() {
   // ─── Media ───
   const startMedia = async () => {
     try {
+      // Check if mediaDevices is available (requires HTTPS or localhost)
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        console.warn('mediaDevices not available — likely non-HTTPS origin');
+        toast.error('Camera/mic requires HTTPS or localhost. Video will be unavailable.');
+        return;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       localStreamRef.current = stream;
-      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+      // Attach to video element immediately
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+      }
     } catch (err) {
       console.error('Media error:', err);
-      toast.error('Camera/microphone access required');
+      if (err.name === 'NotAllowedError') {
+        toast.error('Please allow camera & microphone access in your browser settings');
+      } else if (err.name === 'NotFoundError') {
+        toast.error('No camera or microphone found on this device');
+      } else {
+        toast.error('Could not access camera/microphone: ' + err.message);
+      }
     }
   };
+
+  // Re-attach local stream when video ref becomes available
+  useEffect(() => {
+    if (localVideoRef.current && localStreamRef.current) {
+      localVideoRef.current.srcObject = localStreamRef.current;
+    }
+  });
 
   // ─── Socket.IO + WebRTC ───
   const connectSocket = useCallback(() => {
@@ -244,6 +267,9 @@ function ConsultationRoom() {
     cleanupMedia();
     setCallEnded(true);
     toast.success('Call ended');
+
+    // If patient ends the call, auto-complete on their side (doctor will complete from their end)
+    // No status change here — doctor completes via prescription form or skip
   };
 
   // ─── Doctor: Complete consultation with prescription ───
@@ -311,7 +337,12 @@ function ConsultationRoom() {
             <button onClick={() => setShowPrescription(true)} className="px-6 py-2.5 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition">
               Write Prescription
             </button>
-            <button onClick={() => navigate('/doctor-dashboard')} className="px-6 py-2.5 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 transition">
+            <button onClick={async () => {
+              try {
+                await consultationAPI.completeConsultation(consultationId, { diagnosis: '', doctorNotes: 'Consultation completed without prescription' });
+              } catch (e) { /* ignore */ }
+              navigate('/doctor-dashboard');
+            }} className="px-6 py-2.5 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 transition">
               Skip & Leave
             </button>
           </div>
