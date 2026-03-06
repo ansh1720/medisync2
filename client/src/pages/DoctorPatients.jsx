@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import {
   UserGroupIcon,
   MagnifyingGlassIcon,
-  DocumentTextIcon,
   CalendarDaysIcon,
   PhoneIcon,
   ChatBubbleLeftRightIcon,
@@ -95,12 +94,6 @@ function DoctorPatients() {
            patient.email.toLowerCase().includes(term) ||
            patient.latestCondition.toLowerCase().includes(term);
   });
-
-  const handleViewMedicalRecords = (patient) => {
-    navigate('/health-records', {
-      state: { patientId: patient.id, patientName: patient.name, doctorView: true }
-    });
-  };
 
   const handleScheduleAppointment = (patient) => {
     // Navigate to consultation history filtered for this patient so doctor can manage
@@ -243,11 +236,6 @@ function DoctorPatients() {
 
                   {/* Right: Actions */}
                   <div className="flex flex-wrap gap-2 flex-shrink-0">
-                    <button onClick={() => handleViewMedicalRecords(patient)}
-                      className="flex items-center space-x-1 px-3 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm">
-                      <DocumentTextIcon className="h-4 w-4" />
-                      <span>Records</span>
-                    </button>
                     <button onClick={() => handleCall(patient)}
                       className="flex items-center space-x-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
                       <PhoneIcon className="h-4 w-4" />
