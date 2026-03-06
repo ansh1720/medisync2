@@ -289,10 +289,6 @@ function DoctorDashboard() {
             <span className="text-2xl">👥</span>
             <p className="text-sm font-medium text-foreground mt-2">My Patients</p>
           </Link>
-          <Link to="/health-records" className="bg-card rounded-xl border border-border p-4 text-center hover:bg-accent transition">
-            <span className="text-2xl">📋</span>
-            <p className="text-sm font-medium text-foreground mt-2">Medical Records</p>
-          </Link>
           <Link to="/prescriptions" className="bg-card rounded-xl border border-border p-4 text-center hover:bg-accent transition">
             <span className="text-2xl">💊</span>
             <p className="text-sm font-medium text-foreground mt-2">Prescriptions</p>

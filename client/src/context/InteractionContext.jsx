@@ -17,7 +17,6 @@ export const InteractionProvider = ({ children }) => {
     riskAssessment: 0,
     consultations: 0,
     hospitalLocator: 0,
-    healthRecords: 0,
     prescriptions: 0,
     equipmentReadings: 0,
     communityForum: 0,
@@ -30,7 +29,7 @@ export const InteractionProvider = ({ children }) => {
     favoriteFeatures: [],
     
     // User preferences derived from behavior
-    preferredFeatures: ['diseaseSearch', 'consultations', 'healthRecords'],
+    preferredFeatures: ['diseaseSearch', 'consultations', 'riskAssessment'],
     healthFocus: 'general', // general, chronic, acute, preventive
     engagementLevel: 'moderate', // low, moderate, high
     
@@ -142,7 +141,6 @@ export const InteractionProvider = ({ children }) => {
         riskAssessment: prev.riskAssessment || 0,
         consultations: prev.consultations || 0,
         hospitalLocator: prev.hospitalLocator || 0,
-        healthRecords: prev.healthRecords || 0,
         prescriptions: prev.prescriptions || 0,
         equipmentReadings: prev.equipmentReadings || 0,
         communityForum: prev.communityForum || 0,

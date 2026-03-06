@@ -22,7 +22,6 @@ import UserProfile from './pages/UserProfile';
 import DiseaseDetails from './pages/DiseaseDetails';
 import EnhancedDiseaseSearch from './pages/EnhancedDiseaseSearch';
 import EnhancedDiseaseDetails from './pages/EnhancedDiseaseDetails';
-import HealthRecords from './pages/HealthRecords';
 import Prescriptions from './pages/Prescriptions';
 import DoctorPatients from './pages/DoctorPatients';
 import DoctorVerification from './pages/DoctorVerification';
@@ -203,14 +202,6 @@ function App() {
               element={
                 <ProtectedRoute>
                   <EnhancedDiseaseDetails />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/health-records"
-              element={
-                <ProtectedRoute>
-                  <HealthRecords />
                 </ProtectedRoute>
               }
             />

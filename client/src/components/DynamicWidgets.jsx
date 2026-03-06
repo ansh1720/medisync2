@@ -120,15 +120,6 @@ export const PersonalizedActionsWidget = () => {
         usage: userInteractions.consultations || 0
       },
       {
-        id: 'healthRecords',
-        title: 'Health Records',
-        description: 'View medical history',
-        icon: DocumentTextIcon,
-        color: 'purple',
-        href: '/health-records',
-        usage: userInteractions.healthRecords || 0
-      },
-      {
         id: 'riskAssessment',
         title: 'Risk Assessment',
         description: 'Check health risks',
@@ -393,7 +384,6 @@ export const FeatureDiscoveryWidget = () => {
   const getAllFeatures = () => [
     { id: 'diseaseSearch', name: 'Disease Search', description: 'Research health conditions' },
     { id: 'consultations', name: 'Consultations', description: 'Book doctor appointments' },
-    { id: 'healthRecords', name: 'Health Records', description: 'Manage medical history' },
     { id: 'riskAssessment', name: 'Risk Assessment', description: 'Evaluate health risks' },
     { id: 'hospitalLocator', name: 'Hospital Locator', description: 'Find nearby hospitals' },
     { id: 'equipmentReadings', name: 'Vital Signs', description: 'Track health metrics' },
