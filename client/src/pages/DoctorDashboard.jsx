@@ -96,7 +96,7 @@ function DoctorDashboard() {
   };
 
   const canJoin = (c) => {
-    return ['confirmed', 'in_progress', 'requested'].includes(c.status);
+    return ['confirmed', 'in_progress'].includes(c.status);
   };
 
   const getStatusBadge = (status) => {
