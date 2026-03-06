@@ -1,22 +1,4 @@
-/**
- * Risk Assessment Routes
- * Handles health risk calculation based on symptoms, age, and conditions
- * 
- * Example usage:
- * POST /api/risk - Calculate risk assessment
- * curl -X POST http://localhost:5000/api/risk \
- *   -H "Content-Type: application/json" \
- *   -d '{
- *     "age": 35,
- *     "symptoms": ["fever", "cough", "headache"],
- *     "conditions": ["diabetes"],
- *     "location": {"latitude": 40.7128, "longitude": -74.0060}
- *   }'
- * 
- * GET /api/risk/history - Get user's risk assessment history (authenticated)
- * curl -X GET http://localhost:5000/api/risk/history \
- *   -H "Authorization: Bearer YOUR_JWT_TOKEN"
- */
+
 
 const express = require('express');
 const { body, query } = require('express-validator');

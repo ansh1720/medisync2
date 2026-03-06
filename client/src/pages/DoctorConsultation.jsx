@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { consultationAPI } from '../utils/api';
 import { 
   CalendarIcon, 
@@ -56,6 +56,7 @@ const TIME_SLOTS = [
 
 function DoctorConsultation() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [doctors, setDoctors] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedSpecialty, setSelectedSpecialty] = useState('all');
@@ -264,6 +265,15 @@ function DoctorConsultation() {
       console.log('Booking response:', response.data);
       
       toast.success('Consultation booked successfully!');
+      
+      // Navigate to the consultation room
+      const consultationId = response.data?.data?.consultation?._id || response.data?.data?._id;
+      if (consultationId) {
+        toast.success('Redirecting to consultation room...');
+        setTimeout(() => {
+          navigate(`/consultation/room/${consultationId}`);
+        }, 1500);
+      }
       
       // Reset form
       setShowBooking(false);

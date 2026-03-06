@@ -519,22 +519,22 @@ function RiskAssessment() {
                     {/* Priority recommendations based on risk level */}
                     {riskResult.riskLevel === 'critical' && (
                       <p className="text-red-600 font-medium p-3 bg-red-50 rounded-lg">
-                        ⚠️ Seek immediate medical attention
+                         Seek immediate medical attention
                       </p>
                     )}
                     {riskResult.riskLevel === 'high' && (
                       <p className="text-orange-600 font-medium p-3 bg-orange-50 rounded-lg">
-                        📞 Contact a healthcare provider soon
+                         Contact a healthcare provider soon
                       </p>
                     )}
                     {riskResult.riskLevel === 'medium' && (
                       <p className="text-yellow-600 font-medium p-3 bg-yellow-50 rounded-lg">
-                        🏥 Consider consulting a doctor
+                         Consider consulting a doctor
                       </p>
                     )}
                     {riskResult.riskLevel === 'low' && (
                       <p className="text-green-600 font-medium p-3 bg-green-50 rounded-lg">
-                        ✅ Monitor symptoms and rest
+                         Monitor symptoms and rest
                       </p>
                     )}
 

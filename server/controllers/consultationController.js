@@ -697,7 +697,7 @@ exports.joinConsultation = async (req, res) => {
     
     const consultation = await Consultation.findById(id)
       .populate('doctorId')
-      .populate('patientId', 'name');
+      .populate('userId', 'name email');
 
     if (!consultation) {
       return res.status(404).json({
@@ -707,8 +707,8 @@ exports.joinConsultation = async (req, res) => {
     }
 
     // Check permissions
-    const isPatient = consultation.patientId._id.toString() === req.user.id;
-    const isDoctor = consultation.doctorId.userId.toString() === req.user.id;
+    const isPatient = consultation.userId._id.toString() === req.user.id;
+    const isDoctor = consultation.doctorId?.userId?.toString() === req.user.id;
 
     if (!isPatient && !isDoctor) {
       return res.status(403).json({
@@ -717,18 +717,18 @@ exports.joinConsultation = async (req, res) => {
       });
     }
 
-    // Check if consultation can be joined
-    if (!consultation.canJoinNow()) {
+    // Allow joining if consultation is in valid state
+    const validStatuses = ['requested', 'confirmed', 'in_progress'];
+    if (!validStatuses.includes(consultation.status)) {
       return res.status(400).json({
         success: false,
-        message: 'Consultation cannot be joined at this time',
-        timeUntilConsultation: consultation.getTimeUntilConsultation()
+        message: `Cannot join consultation with status: ${consultation.status}`
       });
     }
 
-    // Update consultation status to ongoing if not already
-    if (consultation.status === 'scheduled') {
-      consultation.status = 'ongoing';
+    // Update consultation status to in_progress if not already
+    if (consultation.status !== 'in_progress') {
+      consultation.status = 'in_progress';
       consultation.actualStartTime = new Date();
       await consultation.save();
     }
@@ -737,55 +737,58 @@ exports.joinConsultation = async (req, res) => {
     let meetingDetails = {};
     
     switch (consultation.consultationType) {
+      case 'video_call':
       case 'video':
-      case 'audio':
-        // In a real system, would integrate with video conferencing service
         meetingDetails = {
           meetingId: `medisync-${consultation._id}`,
-          joinUrl: `https://meet.medisync.com/room/${consultation._id}`,
-          password: generateMeetingPassword(),
-          dialIn: consultation.consultationType === 'audio' ? '+1-555-123-4567' : undefined
+          roomUrl: `/consultation/room/${consultation._id}`,
         };
         break;
         
       case 'chat':
         meetingDetails = {
           chatRoomId: `chat-${consultation._id}`,
-          chatUrl: `/chat/${consultation._id}`
+          roomUrl: `/consultation/room/${consultation._id}`,
         };
         break;
         
+      case 'phone_call':
       case 'in_person':
         meetingDetails = {
-          location: consultation.doctorId.clinicAddress || 'Clinic address not available',
-          instructions: 'Please arrive 15 minutes early for check-in'
+          instructions: 'Please proceed with the consultation',
         };
         break;
     }
 
-    // Send notification to the other party
-    if (io) {
-      const otherPartyId = isPatient ? 
-        `doctor_${consultation.doctorId._id}` : 
-        `patient_${consultation.patientId._id}`;
-      
-      getIO().to(otherPartyId).emit('consultation_joined', {
+    // Send notification to the other party via Socket.IO
+    try {
+      const socketIO = getIO();
+      const otherPartyId = isPatient
+        ? `doctor_${consultation.doctorId._id}`
+        : `user_${consultation.userId._id}`;
+
+      socketIO.to(otherPartyId).emit('consultation_joined', {
         consultationId: consultation._id,
         joinedBy: isPatient ? 'patient' : 'doctor',
         meetingDetails
       });
+    } catch (socketError) {
+      // Socket notification is non-critical, log and continue
+      console.log('Socket notification skipped:', socketError.message);
     }
 
     res.json({
       success: true,
       data: {
         consultation: {
-          id: consultation._id,
-          type: consultation.consultationType,
+          _id: consultation._id,
+          consultationType: consultation.consultationType,
           status: consultation.status,
-          doctor: consultation.doctorId.userId.name,
-          patient: consultation.patientId.name,
-          scheduledTime: consultation.scheduledDateTime
+          doctor: consultation.doctorId?.name,
+          patient: consultation.userId?.name,
+          scheduledAt: consultation.scheduledAt,
+          symptoms: consultation.symptoms,
+          chiefComplaint: consultation.chiefComplaint
         },
         meetingDetails,
         userRole: isPatient ? 'patient' : 'doctor'

@@ -316,17 +316,10 @@ function DoctorDashboard() {
     try {
       const appointment = appointments.find(apt => apt.id === appointmentId);
       if (appointment) {
-        // In a real implementation, this would open the consultation interface
         toast.success(`Starting consultation with ${appointment.patientName}`);
         
-        // Update appointment status to ongoing
-        setAppointments(prev => 
-          prev.map(apt => 
-            apt.id === appointmentId 
-              ? { ...apt, status: 'ongoing' }
-              : apt
-          )
-        );
+        // Navigate to the consultation room
+        navigate(`/consultation/room/${appointmentId}`);
       }
     } catch (error) {
       console.error('Error starting consultation:', error);

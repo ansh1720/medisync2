@@ -105,7 +105,7 @@ export const consultationAPI = {
   completeConsultation: (id, data) => api.put(`/consultation/${id}/complete`, data),
   addConsultationNotes: (id, data) => api.post(`/consultation/${id}/add-notes`, data),
   addPrescription: (id, data) => api.post(`/consultation/${id}/prescription`, data),
-  joinConsultation: (id) => api.get(`/consultation/${id}/join`),
+  joinConsultation: (id) => api.post(`/consultation/${id}/join`),
 };
 
 // Equipment API

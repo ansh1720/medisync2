@@ -1,18 +1,4 @@
-/**
- * Authentication Routes
- * Handles user registration, login, and profile management
- * 
- * Example usage:
- * POST /api/auth/register - Register new user
- * curl -X POST http://localhost:5000/api/auth/register \
- *   -H "Content-Type: application/json" \
- *   -d '{"name":"John Doe","email":"john@example.com","password":"password123"}'
- * 
- * POST /api/auth/login - User login
- * curl -X POST http://localhost:5000/api/auth/login \
- *   -H "Content-Type: application/json" \
- *   -d '{"email":"john@example.com","password":"password123"}'
- */
+
 
 const express = require('express');
 const { body } = require('express-validator');

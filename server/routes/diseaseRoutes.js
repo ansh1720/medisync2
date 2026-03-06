@@ -1,20 +1,3 @@
-/**
- * Disease Routes
- * Handles CRUD operations for diseases with search and filtering
- * 
- * Example usage:
- * GET /api/diseases - Get all diseases with pagination and search
- * curl "http://localhost:5000/api/diseases?page=1&limit=10&name=flu&category=infectious"
- * 
- * GET /api/diseases/search - Text search diseases
- * curl "http://localhost:5000/api/diseases/search?q=fever headache&page=1&limit=5"
- * 
- * POST /api/diseases - Create new disease (admin only)
- * curl -X POST http://localhost:5000/api/diseases \
- *   -H "Content-Type: application/json" \
- *   -H "Authorization: Bearer ADMIN_JWT_TOKEN" \
- *   -d '{"name":"Common Cold","description":"Viral infection","symptoms":["runny nose","cough"]}'
- */
 
 const express = require('express');
 const { body, query, param } = require('express-validator');

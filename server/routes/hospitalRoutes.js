@@ -1,17 +1,3 @@
-/**
- * Hospital Routes
- * Handles hospital locator with geospatial queries and CRUD operations
- * 
- * Example usage:
- * GET /api/hospitals/nearby - Find nearby hospitals
- * curl -X GET "http://localhost:5000/api/hospitals/nearby?lat=40.7128&lng=-74.0060&radius=25"
- * 
- * GET /api/hospitals - Get all hospitals with filtering
- * curl -X GET "http://localhost:5000/api/hospitals?services=emergency&type=general"
- * 
- * POST /api/hospitals - Create new hospital (admin only)
- * PUT /api/hospitals/:id - Update hospital (admin only)
- */
 
 const express = require('express');
 const { body, query, param } = require('express-validator');

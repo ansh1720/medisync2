@@ -24,6 +24,7 @@ import Prescriptions from './pages/Prescriptions';
 import DoctorPatients from './pages/DoctorPatients';
 import DoctorVerification from './pages/DoctorVerification';
 import AdminVerifications from './pages/AdminVerifications';
+import ConsultationRoom from './pages/ConsultationRoom';
 
 function App() {
   return (
@@ -128,6 +129,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <DoctorConsultation />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/consultation/room/:consultationId"
+              element={
+                <ProtectedRoute>
+                  <ConsultationRoom />
                 </ProtectedRoute>
               }
             />

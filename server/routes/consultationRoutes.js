@@ -1,24 +1,3 @@
-/**
- * Consultation Routes
- * Handles doctor consultation booking and management system
- * 
- * Example usage:
- * POST /api/consultation/book - Book new consultation
- * curl -X POST http://localhost:5000/api/consultation/book \
- *   -H "Content-Type: application/json" \
- *   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
- *   -d '{
- *     "doctorId": "507f1f77bcf86cd799439011",
- *     "preferredDateTime": "2024-02-15T14:00:00Z",
- *     "consultationType": "video",
- *     "symptoms": "Persistent headaches",
- *     "urgency": "medium"
- *   }'
- * 
- * GET /api/consultation/my-consultations - Get user's consultations
- * PUT /api/consultation/:id/reschedule - Reschedule consultation
- * POST /api/consultation/:id/cancel - Cancel consultation
- */
 
 const express = require('express');
 const { body, query, param } = require('express-validator');
