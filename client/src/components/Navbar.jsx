@@ -9,23 +9,39 @@ function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const getNavigationItems = () => {
-    const baseNavigation = [
-      { name: 'Dashboard', href: getRoleDashboard(user?.role || 'user') },
+    const role = user?.role || 'user';
+
+    // Common items for all roles
+    const items = [
+      { name: 'Dashboard', href: getRoleDashboard(role) },
       { name: 'Diseases', href: '/diseases' },
       { name: 'Risk Assessment', href: '/risk-assessment' },
-      { name: 'Find Doctors', href: '/consultations' },
-      { name: 'My Consultations', href: '/consultation/history' },
-      { name: 'Hospitals', href: '/hospitals' },
-      { name: 'Health News', href: '/news' },
     ];
 
-    // Add role-specific navigation items
-    // Note: Admins don't need a separate "Admin Panel" link because Dashboard already goes to /admin-dashboard
-    if (user?.role === 'doctor') {
-      baseNavigation.push({ name: 'My Patients', href: '/doctor/patients' });
+    if (role === 'doctor') {
+      // Doctor-specific navigation
+      items.push(
+        { name: 'My Patients', href: '/doctor/patients' },
+        { name: 'Hospitals', href: '/hospitals' },
+        { name: 'Health News', href: '/news' },
+      );
+    } else if (role === 'admin') {
+      // Admin navigation
+      items.push(
+        { name: 'Hospitals', href: '/hospitals' },
+        { name: 'Health News', href: '/news' },
+      );
+    } else {
+      // Patient (user) navigation
+      items.push(
+        { name: 'Find Doctors', href: '/consultations' },
+        { name: 'My Consultations', href: '/consultation/history' },
+        { name: 'Hospitals', href: '/hospitals' },
+        { name: 'Health News', href: '/news' },
+      );
     }
 
-    return baseNavigation;
+    return items;
   };
 
   return (
