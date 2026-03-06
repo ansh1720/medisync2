@@ -44,8 +44,9 @@ function DoctorDiscovery() {
       if (search.trim()) params.search = search.trim();
 
       const res = await consultationAPI.getDoctors(params);
-      setDoctors(res.data.data || []);
-      setTotalPages(res.data.totalPages || 1);
+      const docs = Array.isArray(res.data?.data) ? res.data.data : [];
+      setDoctors(docs);
+      setTotalPages(res.data?.totalPages || 1);
     } catch (err) {
       toast.error('Failed to load doctors');
     } finally {

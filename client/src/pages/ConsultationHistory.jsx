@@ -29,7 +29,8 @@ function ConsultationHistory() {
       const params = {};
       if (filter !== 'all') params.status = filter;
       const res = await consultationAPI.getMyConsultations(params);
-      setConsultations(res.data.data || []);
+      const list = Array.isArray(res.data?.data) ? res.data.data : [];
+      setConsultations(list);
     } catch (err) {
       toast.error('Failed to load consultation history');
     } finally {

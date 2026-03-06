@@ -58,7 +58,8 @@ function BookingPage() {
       setSlotsLoading(true);
       setSelectedSlot('');
       const res = await consultationAPI.getAvailableSlots(doctorId, selectedDate);
-      setSlots(res.data.data || []);
+      const slotData = Array.isArray(res.data?.data) ? res.data.data : [];
+      setSlots(slotData);
     } catch (err) {
       setSlots([]);
     } finally {

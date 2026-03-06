@@ -51,7 +51,8 @@ function DoctorDashboard() {
         params.date = new Date().toISOString().split('T')[0];
       }
       const res = await consultationAPI.getDoctorConsultations(params);
-      setConsultations(res.data.data || []);
+      const list = Array.isArray(res.data?.data) ? res.data.data : [];
+      setConsultations(list);
     } catch (err) {
       console.error('Failed to load consultations:', err);
       setConsultations([]);

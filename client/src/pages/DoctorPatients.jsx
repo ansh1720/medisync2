@@ -32,10 +32,11 @@ function DoctorPatients() {
       // Load patients from completed consultations
       const response = await consultationAPI.getDoctorConsultations({});
       
-      if (response.data.success && response.data.data) {
-        // Extract unique patients from completed consultations
+      const consultations = Array.isArray(response.data?.data) ? response.data.data : [];
+      if (response.data?.success && consultations.length > 0) {
+        // Extract unique patients from consultations
         const patientMap = {};
-        response.data.data.forEach(c => {
+        consultations.forEach(c => {
           const p = c.userId;
           if (p && !patientMap[p._id]) {
             patientMap[p._id] = {
