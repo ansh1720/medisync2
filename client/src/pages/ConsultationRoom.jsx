@@ -86,11 +86,28 @@ function ConsultationRoom() {
         return;
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      // Mobile-friendly constraints: use facingMode for front camera, lower resolution for performance
+      const constraints = {
+        video: {
+          facingMode: 'user',       // Front camera on mobile
+          width: { ideal: 640 },    // Reasonable for mobile
+          height: { ideal: 480 }
+        },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       localStreamRef.current = stream;
-      // Attach to video element immediately
+
+      // Attach to video element immediately and force play (needed on mobile)
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
+        // Mobile browsers sometimes need explicit play()
+        try { await localVideoRef.current.play(); } catch (_) {}
       }
     } catch (err) {
       console.error('Media error:', err);
@@ -98,6 +115,18 @@ function ConsultationRoom() {
         toast.error('Please allow camera & microphone access in your browser settings');
       } else if (err.name === 'NotFoundError') {
         toast.error('No camera or microphone found on this device');
+      } else if (err.name === 'OverconstrainedError') {
+        // Fallback: try without specific constraints
+        try {
+          const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          localStreamRef.current = fallbackStream;
+          if (localVideoRef.current) {
+            localVideoRef.current.srcObject = fallbackStream;
+            try { await localVideoRef.current.play(); } catch (_) {}
+          }
+        } catch (fallbackErr) {
+          toast.error('Could not access camera: ' + fallbackErr.message);
+        }
       } else {
         toast.error('Could not access camera/microphone: ' + err.message);
       }
@@ -108,6 +137,8 @@ function ConsultationRoom() {
   useEffect(() => {
     if (localVideoRef.current && localStreamRef.current) {
       localVideoRef.current.srcObject = localStreamRef.current;
+      // Force play on mobile browsers
+      localVideoRef.current.play().catch(() => {});
     }
   });
 
@@ -207,6 +238,8 @@ function ConsultationRoom() {
     pc.ontrack = (event) => {
       if (remoteVideoRef.current && event.streams[0]) {
         remoteVideoRef.current.srcObject = event.streams[0];
+        // Force play on mobile browsers
+        remoteVideoRef.current.play().catch(() => {});
         setRemoteConnected(true);
       }
     };
