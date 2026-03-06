@@ -61,7 +61,8 @@ function ConsultationHistory() {
       setFeedbackId(null);
       fetchConsultations();
     } catch (err) {
-      toast.error('Failed to submit feedback');
+      console.error('Feedback error:', err.response?.data || err);
+      toast.error(err.response?.data?.message || 'Failed to submit feedback');
     }
   };
 

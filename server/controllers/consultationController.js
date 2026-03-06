@@ -449,14 +449,22 @@ exports.addFeedback = async (req, res) => {
     consultation.feedback = { rating, comment, submittedAt: new Date() };
     await consultation.save();
 
-    // Update doctor rating
+    // Update doctor rating (don't let this fail the whole request)
     if (rating) {
-      const doctor = await Doctor.findById(consultation.doctorId);
-      if (doctor) {
-        const currentTotal = (doctor.rating?.average || 0) * (doctor.rating?.reviewCount || 0);
-        doctor.rating.reviewCount = (doctor.rating?.reviewCount || 0) + 1;
-        doctor.rating.average = (currentTotal + rating) / doctor.rating.reviewCount;
-        await doctor.save();
+      try {
+        const doctor = await Doctor.findById(consultation.doctorId);
+        if (doctor) {
+          // Ensure rating sub-document exists
+          if (!doctor.rating) {
+            doctor.rating = { average: 0, reviewCount: 0 };
+          }
+          const currentTotal = (doctor.rating.average || 0) * (doctor.rating.reviewCount || 0);
+          doctor.rating.reviewCount = (doctor.rating.reviewCount || 0) + 1;
+          doctor.rating.average = (currentTotal + rating) / doctor.rating.reviewCount;
+          await doctor.save();
+        }
+      } catch (ratingErr) {
+        console.error('Failed to update doctor rating (feedback still saved):', ratingErr);
       }
     }
 
