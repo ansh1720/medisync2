@@ -9,7 +9,6 @@ function ForgotPassword() {
   const [step, setStep] = useState(1); // 1: enter email, 2: enter OTP + new password
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
-  const [generatedOtp, setGeneratedOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -28,9 +27,7 @@ function ForgotPassword() {
       const response = await authAPI.forgotPassword({ email });
       
       if (response.data?.success) {
-        // Store OTP for display (demo mode)
-        setGeneratedOtp(response.data.data?.otp || '');
-        toast.success('OTP has been generated!');
+        toast.success('OTP has been sent to your email!');
         setStep(2);
       }
     } catch (error) {
@@ -156,14 +153,9 @@ function ForgotPassword() {
         {/* Step 2: Enter OTP + New Password */}
         {step === 2 && (
           <form className="mt-8 space-y-6" onSubmit={handleResetPassword}>
-            {/* Show OTP for demo */}
-            {generatedOtp && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-800 font-medium">Demo Mode: Your OTP is</p>
-                <p className="text-2xl font-bold text-blue-900 tracking-widest mt-1">{generatedOtp}</p>
-                <p className="text-xs text-blue-600 mt-1">In production, this would be sent to your email.</p>
-              </div>
-            )}
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <p className="text-sm text-green-800">A 6-digit OTP has been sent to <strong>{email}</strong>. Check your inbox (and spam folder).</p>
+            </div>
 
             <div>
               <label htmlFor="otp" className="label">
@@ -242,7 +234,7 @@ function ForgotPassword() {
             <div className="flex justify-between">
               <button
                 type="button"
-                onClick={() => { setStep(1); setOtp(''); setGeneratedOtp(''); }}
+                onClick={() => { setStep(1); setOtp(''); }}
                 className="text-sm font-medium text-gray-600 hover:text-gray-500"
               >
                 Resend OTP

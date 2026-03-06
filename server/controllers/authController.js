@@ -7,6 +7,7 @@ const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 const User = require('../models/User');
 const Doctor = require('../models/Doctor');
+const { sendOTPEmail } = require('../utils/email');
 
 /**
  * Generate JWT token
@@ -339,13 +340,23 @@ const forgotPassword = async (req, res, next) => {
     user.resetPasswordExpire = new Date(Date.now() + 10 * 60 * 1000);
     await user.save();
 
-    console.log(`[Password Reset] OTP for ${email}: ${otp}`);
+    // Send OTP via email
+    try {
+      await sendOTPEmail(email, otp, user.name);
+    } catch (emailError) {
+      console.error('[Password Reset] Email send failed:', emailError.message);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send OTP email. Please try again later.'
+      });
+    }
+
+    console.log(`[Password Reset] OTP sent to ${email}`);
 
     res.json({
       success: true,
-      message: 'Password reset OTP has been generated',
+      message: 'OTP has been sent to your email address',
       data: {
-        otp, // In production, remove this and send via email/SMS
         expiresIn: '10 minutes'
       }
     });
