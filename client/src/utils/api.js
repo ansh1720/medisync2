@@ -7,8 +7,6 @@ const API_BASE_URL = import.meta.env.VITE_API_URL ||
     ? 'https://medisync-api-9043.onrender.com/api' 
     : 'http://localhost:5000/api');
 
-console.log('🔗 API Base URL:', API_BASE_URL);
-
 // Create axios instance with longer timeout for Render free tier cold starts
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -47,13 +45,9 @@ api.interceptors.response.use(
   }
 );
 
-// Auth API functions with better UX for slow backends
+// Auth API functions
 export const authAPI = {
   login: async (credentials) => {
-    // Show loading message for potential cold start
-    if (API_BASE_URL.includes('render.com')) {
-      console.log('🔄 Connecting to server (this may take up to 60 seconds if the server is waking up)...');
-    }
     return api.post('/auth/login', credentials, { timeout: 30000 }); // 30s timeout
   },
   register: (userData) => api.post('/auth/register', userData, { timeout: 30000 }),

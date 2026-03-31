@@ -12,14 +12,7 @@ class EmailService {
 
   init() {
     try {
-      // Check if SendGrid API key is available
-      console.log('[EmailService] Checking SendGrid configuration...');
-      console.log('[EmailService] SENDGRID_API_KEY (SMTP_PASS):', process.env.SMTP_PASS ? 'SET' : 'NOT SET');
-      console.log('[EmailService] FROM_EMAIL:', process.env.FROM_EMAIL || 'noreply@medisync.com');
-      
       if (!process.env.SMTP_PASS) {
-        console.warn('⚠️  [EmailService] SendGrid API key not configured (SMTP_PASS env var)!');
-        console.warn('⚠️  [EmailService] Please set SMTP_PASS to your SendGrid API key.');
         this.initialized = false;
         return;
       }
@@ -27,10 +20,7 @@ class EmailService {
       // Initialize SendGrid with API key
       sgMail.setApiKey(process.env.SMTP_PASS);
       this.initialized = true;
-      console.log('✅ [EmailService] Email service initialized successfully with SendGrid Web API');
     } catch (error) {
-      console.error('❌ [EmailService] Failed to initialize email service:', error.message);
-      console.error('[EmailService] Error details:', error);
       this.initialized = false;
     }
   }
@@ -42,12 +32,7 @@ class EmailService {
    * @param {string} userName - User's name
    */
   async sendPasswordResetOTP(toEmail, otp, userName = 'User') {
-    console.log(`[EmailService.sendPasswordResetOTP] Starting email send to ${toEmail}`);
-    console.log(`[EmailService.sendPasswordResetOTP] Service initialized: ${this.initialized}`);
-    
     if (!this.initialized) {
-      console.warn('⚠️  [EmailService.sendPasswordResetOTP] Email service not initialized, skipping email send');
-      console.warn('⚠️  [EmailService.sendPasswordResetOTP] OTP will NOT be sent via email, but password reset may still work');
       return;
     }
 
@@ -99,17 +84,9 @@ class EmailService {
     };
 
     try {
-      console.log('[EmailService.sendPasswordResetOTP] Sending email via SendGrid Web API...');
       const response = await sgMail.send(msg);
-      console.log(`✅ [EmailService.sendPasswordResetOTP] Password reset OTP sent to ${toEmail}`);
-      console.log(`[EmailService.sendPasswordResetOTP] SendGrid response code: ${response[0].statusCode}`);
       return { success: true };
     } catch (error) {
-      console.error(`❌ [EmailService.sendPasswordResetOTP] Failed to send OTP email to ${toEmail}`);
-      console.error(`[EmailService.sendPasswordResetOTP] Error type: ${error.type || error.name}`);
-      console.error(`[EmailService.sendPasswordResetOTP] Error message: ${error.message}`);
-      console.error(`[EmailService.sendPasswordResetOTP] Error code: ${error.code}`);
-      console.error(`[EmailService.sendPasswordResetOTP] Full error:`, error);
       throw error;
     }
   }

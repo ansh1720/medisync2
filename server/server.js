@@ -14,13 +14,6 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 // Startup validation
-console.log('🚀 MediSync Server Starting...');
-console.log('📋 Environment Check:');
-console.log('   - NODE_ENV:', process.env.NODE_ENV || 'development');
-console.log('   - MONGO_URI:', process.env.MONGO_URI ? 'configured' : 'NOT CONFIGURED');
-console.log('   - JWT_SECRET:', process.env.JWT_SECRET ? 'configured' : 'NOT CONFIGURED');
-console.log('   - SMTP_USER:', process.env.SMTP_USER ? 'configured' : 'NOT CONFIGURED');
-console.log('   - SMTP_PASS:', process.env.SMTP_PASS ? 'configured' : 'NOT CONFIGURED');
 
 // Route imports
 const authRoutes = require('./routes/authRoutes');

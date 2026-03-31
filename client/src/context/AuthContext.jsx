@@ -82,24 +82,17 @@ export function AuthProvider({ children }) {
   const login = async (credentials) => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
-      console.log('[AuthContext.login] === LOGIN STARTED ===');
-      console.log('[AuthContext.login] Email:', credentials.email);
-      console.log('[AuthContext.login] Sending API request...');
       
       const response = await authAPI.login(credentials);
-      console.log('[AuthContext.login] ✓ API response received:', response.data);
       
       // Handle the nested data structure from backend
       const { user, token } = response.data.data || response.data;
       
       if (!user || !token) {
-        console.error('[AuthContext.login] Invalid response structure:', response.data);
         throw new Error('Invalid response from server');
       }
-      console.log('[AuthContext.login] Response validation passed');
       
       // Save to localStorage
-      console.log('[AuthContext.login] Saving to localStorage...');
       localStorage.setItem('medisync_token', token);
       localStorage.setItem('medisync_user', JSON.stringify(user));
       
@@ -108,17 +101,10 @@ export function AuthProvider({ children }) {
         payload: { user, token },
       });
       
-      console.log('[AuthContext.login] === LOGIN SUCCESSFUL ===');
       toast.success(`Welcome back, ${user.name}!`);
       return response.data;
     } catch (error) {
       dispatch({ type: 'SET_LOADING', payload: false });
-      console.error('[AuthContext.login] === ERROR IN LOGIN ===');
-      console.error('[AuthContext.login] Error name:', error.name);
-      console.error('[AuthContext.login] Error message:', error.message);
-      console.error('[AuthContext.login] Error code:', error.code);
-      console.error('[AuthContext.login] Response status:', error.response?.status);
-      console.error('[AuthContext.login] Response data:', error.response?.data);
       
       // Handle different types of errors
       if (error.response?.data?.message) {
