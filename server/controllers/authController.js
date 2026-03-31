@@ -115,9 +115,12 @@ const register = async (req, res, next) => {
  */
 const login = async (req, res, next) => {
   try {
+    console.log('[Login] === LOGIN ATTEMPT STARTED ===');
+    
     // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('[Login] Validation failed:', errors.array());
       return res.status(400).json({
         success: false,
         message: 'Validation failed',
@@ -126,40 +129,56 @@ const login = async (req, res, next) => {
     }
 
     const { email, password } = req.body;
+    console.log('[Login] Email:', email);
 
     // Find user by email
+    console.log('[Login] Looking up user...');
     const user = await User.findByEmail(email);
     if (!user) {
+      console.log('[Login] User not found for email:', email);
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
       });
     }
+    console.log('[Login] User found:', user.email);
 
     // Check if user is active
     if (!user.isActive) {
+      console.log('[Login] User account is inactive');
       return res.status(401).json({
         success: false,
         message: 'Account is deactivated. Please contact support.'
       });
     }
+    console.log('[Login] User is active');
 
     // Verify password
+    console.log('[Login] Starting password comparison...');
     const isPasswordValid = await user.comparePassword(password);
+    console.log('[Login] Password comparison result:', isPasswordValid);
+    
     if (!isPasswordValid) {
+      console.log('[Login] Password is invalid');
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
       });
     }
+    console.log('[Login] ✓ Password is valid');
 
     // Generate token
+    console.log('[Login] Generating JWT token...');
     const token = generateToken(user._id);
+    console.log('[Login] Token generated');
 
     // Update last login
+    console.log('[Login] Updating last login timestamp...');
     user.lastLogin = new Date();
     await user.save();
+    console.log('[Login] ✓ Last login updated');
 
+    console.log('[Login] === LOGIN SUCCESSFUL ===');
     res.json({
       success: true,
       data: {
@@ -171,6 +190,10 @@ const login = async (req, res, next) => {
     });
 
   } catch (error) {
+    console.error('[Login] === ERROR IN LOGIN ===');
+    console.error('[Login] Error type:', error.name);
+    console.error('[Login] Error message:', error.message);
+    console.error('[Login] Stack trace:', error.stack);
     next(error);
   }
 };
