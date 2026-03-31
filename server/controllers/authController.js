@@ -400,7 +400,8 @@ const resetPassword = async (req, res, next) => {
 
     // Validate inputs
     if (!email || !email.trim()) {
-      console.log('[ResetPassword] Email validation failed - empty');\n      return res.status(400).json({
+      console.log('[ResetPassword] Email validation failed - empty');
+      return res.status(400).json({
         success: false,
         message: 'Email is required'
       });
