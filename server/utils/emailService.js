@@ -18,7 +18,7 @@ class EmailService {
       console.log('[EmailService] Checking SMTP configuration...');
       console.log('[EmailService] SMTP_USER:', process.env.SMTP_USER ? 'SET' : 'NOT SET');
       console.log('[EmailService] SMTP_PASS:', process.env.SMTP_PASS ? 'SET' : 'NOT SET');
-      console.log('[EmailService] SMTP_HOST:', process.env.SMTP_HOST || 'smtp.gmail.com');
+      console.log('[EmailService] SMTP_HOST:', process.env.SMTP_HOST || 'smtp.sendgrid.net');
       console.log('[EmailService] SMTP_PORT:', process.env.SMTP_PORT || 587);
       
       if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
@@ -28,13 +28,17 @@ class EmailService {
         return;
       }
 
-      // Create transporter
+      // Create transporter - optimized for SendGrid and production
       this.transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+        host: process.env.SMTP_HOST || 'smtp.sendgrid.net',
         port: parseInt(process.env.SMTP_PORT) || 587,
         secure: false,
-        connectionTimeout: 5000,
-        socketTimeout: 5000,
+        connectionTimeout: 10000,  // Increased to 10s for better reliability
+        socketTimeout: 10000,
+        pool: {
+          maxConnections: 1,
+          maxMessages: 100
+        },
         auth: {
           user: process.env.SMTP_USER,
           pass: process.env.SMTP_PASS
@@ -124,7 +128,7 @@ class EmailService {
     `;
 
     const mailOptions = {
-      from: `"MediSync" <${process.env.SMTP_USER}>`,
+      from: process.env.FROM_EMAIL || `"MediSync" <${process.env.SMTP_USER}>`,
       to: toEmail,
       subject: '🔑 MediSync - Password Reset Verification Code',
       html: emailHtml,
