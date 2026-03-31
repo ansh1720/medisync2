@@ -54,12 +54,12 @@ export const authAPI = {
     if (API_BASE_URL.includes('render.com')) {
       console.log('🔄 Connecting to server (this may take up to 60 seconds if the server is waking up)...');
     }
-    return api.post('/auth/login', credentials);
+    return api.post('/auth/login', credentials, { timeout: 30000 }); // 30s timeout
   },
-  register: (userData) => api.post('/auth/register', userData),
-  getProfile: () => api.get('/auth/profile'),
-  updateProfile: (data) => api.put('/auth/profile', data),
-  changePassword: (data) => api.put('/auth/change-password', data),
+  register: (userData) => api.post('/auth/register', userData, { timeout: 30000 }),
+  getProfile: () => api.get('/auth/profile', { timeout: 15000 }),
+  updateProfile: (data) => api.put('/auth/profile', data, { timeout: 15000 }),
+  changePassword: (data) => api.put('/auth/change-password', data, { timeout: 15000 }),
   forgotPassword: (data) => api.post('/auth/forgot-password', data, { timeout: 15000 }), // 15s timeout - email sends in background
   resetPassword: (data) => api.post('/auth/reset-password', data, { timeout: 10000 }),
 };

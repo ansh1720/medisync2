@@ -155,11 +155,15 @@ const login = async (req, res, next) => {
 
     // Verify password
     console.log('[Login] Starting password comparison...');
+    const startTime = Date.now();
     const isPasswordValid = await user.comparePassword(password);
+    const comparisonTime = Date.now() - startTime;
     console.log('[Login] Password comparison result:', isPasswordValid);
+    console.log('[Login] Password comparison took:', comparisonTime, 'ms');
     
     if (!isPasswordValid) {
       console.log('[Login] Password is invalid');
+      console.log('[Login] Sending error response to client...');
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
@@ -174,11 +178,15 @@ const login = async (req, res, next) => {
 
     // Update last login
     console.log('[Login] Updating last login timestamp...');
+    const saveStartTime = Date.now();
     user.lastLogin = new Date();
     await user.save();
+    const saveTime = Date.now() - saveStartTime;
     console.log('[Login] ✓ Last login updated');
+    console.log('[Login] User.save() took:', saveTime, 'ms');
 
     console.log('[Login] === LOGIN SUCCESSFUL ===');
+    console.log('[Login] Sending success response to client...');
     res.json({
       success: true,
       data: {
@@ -188,6 +196,7 @@ const login = async (req, res, next) => {
       },
       message: 'Login successful'
     });
+    console.log('[Login] Response sent successfully');
 
   } catch (error) {
     console.error('[Login] === ERROR IN LOGIN ===');
