@@ -7,7 +7,7 @@ const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 const User = require('../models/User');
 const Doctor = require('../models/Doctor');
-const { sendOTPEmail } = require('../utils/email');
+const emailService = require('../utils/emailService');
 
 /**
  * Generate JWT token
@@ -310,56 +310,60 @@ const forgotPassword = async (req, res, next) => {
   try {
     const { email } = req.body;
 
-    if (!email) {
+    // Validate input
+    if (!email || !email.trim()) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide your email address'
+        message: 'Email address is required'
       });
     }
 
+    // Find user by email
     const user = await User.findByEmail(email);
     if (!user) {
-      return res.status(404).json({
+      // For security, don't reveal if email exists
+      return res.status(400).json({
         success: false,
-        message: 'No account found with this email address'
+        message: 'If an account exists with this email, we\'ll send a password reset code'
       });
     }
 
+    // Check if account is active
     if (!user.isActive) {
-      return res.status(401).json({
+      return res.status(400).json({
         success: false,
-        message: 'Account is deactivated. Please contact support.'
+        message: 'This account is deactivated. Please contact support.'
       });
     }
 
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    // Store OTP with 10-minute expiry
+    // Save OTP to user record
     user.resetPasswordOTP = otp;
-    user.resetPasswordExpire = new Date(Date.now() + 10 * 60 * 1000);
+    user.resetPasswordExpire = otpExpiry;
     await user.save();
 
-    // Send OTP via email (non-blocking)
+    console.log(`[Password Reset] OTP generated for ${email}: ${otp}`);
+
+    // Send OTP email
     try {
-      await sendOTPEmail(email, otp, user.name);
+      await emailService.sendPasswordResetOTP(email, otp, user.name);
+      console.log(`[Password Reset] Email sent to ${email}`);
     } catch (emailError) {
-      console.error('[Password Reset] Email send failed:', emailError.message);
-      // Don't fail the request if email fails - user can still try to reset manually
-      // Just log the error and continue
+      console.error(`[Password Reset] Failed to send email to ${email}:`, emailError.message);
+      // Still success - user can use the code even if email failed
     }
 
-    console.log(`[Password Reset] OTP sent to ${email}`);
-
+    // Response - don't reveal OTP in API response
     res.json({
       success: true,
-      message: 'OTP has been sent to your email address',
-      data: {
-        expiresIn: '10 minutes'
-      }
+      message: 'If an account exists with this email, a password reset code has been sent. Please check your inbox and spam folder.'
     });
 
   } catch (error) {
+    console.error('[Password Reset] Error in forgotPassword:', error);
     next(error);
   }
 };
@@ -372,46 +376,57 @@ const resetPassword = async (req, res, next) => {
   try {
     const { email, otp, newPassword } = req.body;
 
-    if (!email || !otp || !newPassword) {
+    // Validate inputs
+    if (!email || !email.trim()) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide email, OTP, and new password'
+        message: 'Email is required'
       });
     }
 
-    if (newPassword.length < 6) {
+    if (!otp || otp.length !== 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid OTP. Please enter the 6-digit code.'
+      });
+    }
+
+    if (!newPassword || newPassword.length < 6) {
       return res.status(400).json({
         success: false,
         message: 'Password must be at least 6 characters long'
       });
     }
 
+    // Find user
     const user = await User.findByEmail(email);
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'No account found with this email address'
-      });
-    }
-
-    // Check OTP validity
-    if (!user.resetPasswordOTP || !user.resetPasswordExpire) {
       return res.status(400).json({
         success: false,
-        message: 'No password reset request found. Please request a new OTP.'
+        message: 'Invalid email or OTP'
       });
     }
 
+    // Verify OTP exists and hasn't expired
+    if (!user.resetPasswordOTP) {
+      return res.status(400).json({
+        success: false,
+        message: 'No password reset request found. Please request a new code.'
+      });
+    }
+
+    // Check OTP expiry
     if (new Date() > user.resetPasswordExpire) {
       user.resetPasswordOTP = null;
       user.resetPasswordExpire = null;
       await user.save();
       return res.status(400).json({
         success: false,
-        message: 'OTP has expired. Please request a new one.'
+        message: 'Password reset code has expired. Please request a new one.'
       });
     }
 
+    // Verify OTP matches
     if (user.resetPasswordOTP !== otp) {
       return res.status(400).json({
         success: false,
@@ -419,18 +434,21 @@ const resetPassword = async (req, res, next) => {
       });
     }
 
-    // Reset password
-    user.password = newPassword;
+    // Update password
+    user.password = newPassword; // Will be hashed by pre-save middleware
     user.resetPasswordOTP = null;
     user.resetPasswordExpire = null;
     await user.save();
 
+    console.log(`[Password Reset] Password reset successful for ${email}`);
+
     res.json({
       success: true,
-      message: 'Password has been reset successfully. You can now login with your new password.'
+      message: 'Your password has been reset successfully. Please login with your new password.'
     });
 
   } catch (error) {
+    console.error('[Password Reset] Error in resetPassword:', error);
     next(error);
   }
 };
