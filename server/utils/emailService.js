@@ -56,51 +56,34 @@ class EmailService {
       <html>
         <head>
           <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #444; }
-            .container { max-width: 480px; margin: 0 auto; padding: 20px; background-color: #f9fafb; }
-            .header { text-align: center; margin-bottom: 24px; }
-            .logo { color: #2563eb; font-size: 24px; font-weight: bold; }
-            .tagline { color: #6b7280; font-size: 14px; margin-top: 4px; }
-            .content { background-color: white; border-radius: 12px; padding: 24px; border: 1px solid #e5e7eb; }
-            .title { color: #111827; font-size: 20px; font-weight: bold; margin: 0 0 8px; }
-            .message { color: #4b5563; margin: 0 0 20px; }
-            .otp-box { background-color: #2563eb; color: white; font-size: 32px; font-weight: bold; letter-spacing: 8px; text-align: center; padding: 16px; border-radius: 8px; margin: 20px 0; font-family: monospace; }
-            .expiry { color: #6b7280; font-size: 14px; margin: 16px 0; }
-            .footer { color: #9ca3af; font-size: 12px; text-align: center; margin-top: 24px; }
-            .warning { color: #dc2626; background-color: #fee2e2; border-left: 4px solid #dc2626; padding: 12px; border-radius: 4px; margin: 16px 0; }
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { margin-bottom: 20px; }
+            .content { margin: 20px 0; }
+            .otp-box { border: 1px solid #ddd; padding: 15px; background-color: #f5f5f5; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 4px; font-family: monospace; margin: 20px 0; }
+            .footer { margin-top: 30px; border-top: 1px solid #ddd; padding-top: 15px; font-size: 12px; color: #666; }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
-              <div class="logo">🏥 MediSync</div>
-              <div class="tagline">Your Health Companion</div>
+              <h2>MediSync Password Reset</h2>
             </div>
             
             <div class="content">
-              <h2 class="title">Password Reset Request</h2>
-              <p class="message">Hi ${userName},</p>
-              <p class="message">
-                We received a request to reset your password. Use the verification code below to proceed:
-              </p>
+              <p>Hi ${userName},</p>
+              
+              <p>You requested to reset your password. Use the code below to proceed:</p>
               
               <div class="otp-box">${otp}</div>
               
-              <div class="expiry">
-                ⏰ <strong>This code expires in 10 minutes</strong>
-              </div>
+              <p>This code expires in 10 minutes.</p>
               
-              <div class="warning">
-                <strong>🔒 Security Notice:</strong> If you didn't request a password reset, please ignore this email or contact support immediately.
-              </div>
-              
-              <p style="color: #6b7280; font-size: 14px; margin-top: 20px;">
-                This is an automated message, please don't reply to this email.
-              </p>
+              <p>If you didn't request a password reset, please ignore this email.</p>
             </div>
             
             <div class="footer">
-              © ${new Date().getFullYear()} MediSync Healthcare Platform. All rights reserved.
+              <p>MediSync Healthcare Platform</p>
             </div>
           </div>
         </body>
