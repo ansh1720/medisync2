@@ -91,6 +91,13 @@ mongoose.connect(process.env.MONGODB_URI || process.env.MONGO_URI, {
 });
 
 // Routes
+app.get('/api', (req, res) => {
+  res.status(200).json({ 
+    message: 'MediSync API is running', 
+    status: 'ok', 
+    timestamp: new Date().toISOString() 
+  });
+});
 app.use('/api/auth', authRoutes);
 app.use('/api/diseases', diseaseRoutes);
 app.use('/api/risk', require('./routes/riskRoutes'));
