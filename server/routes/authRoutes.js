@@ -7,6 +7,15 @@ const { verifyToken } = require('../middlewares/auth');
 
 const router = express.Router();
 
+// Test endpoint to verify auth routes are loaded
+router.get('/test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Auth routes are properly loaded',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Validation rules
 const registerValidation = [
   body('name')
@@ -78,6 +87,9 @@ router.post('/login', loginValidation, authController.login);
  * @route   POST /api/auth/forgot-password
  * @desc    Generate OTP for password reset
  * @access  Public
+ * @example curl -X POST http://localhost:5000/api/auth/forgot-password \
+ *           -H "Content-Type: application/json" \
+ *           -d '{"email":"user@example.com"}'
  */
 router.post('/forgot-password', [
   body('email')
@@ -90,6 +102,9 @@ router.post('/forgot-password', [
  * @route   POST /api/auth/reset-password
  * @desc    Reset password using OTP
  * @access  Public
+ * @example curl -X POST http://localhost:5000/api/auth/reset-password \
+ *           -H "Content-Type: application/json" \
+ *           -d '{"email":"user@example.com","otp":"123456","newPassword":"newpass123"}'
  */
 router.post('/reset-password', [
   body('email')
