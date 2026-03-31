@@ -359,16 +359,16 @@ const forgotPassword = async (req, res, next) => {
     console.log('[ForgotPassword] ✅ OTP saved successfully to database');
 
     console.log('[ForgotPassword] Attempting to send password reset email...');
-    // Send OTP email
-    try {
-      await emailService.sendPasswordResetOTP(email, otp, user.name);
-      console.log(`[ForgotPassword] ✅ Email sent successfully to ${email}`);
-    } catch (emailError) {
-      console.error(`[ForgotPassword] ❌ Failed to send email to ${email}:`, emailError.message);
-      console.error('[ForgotPassword] Email error details:', emailError);
-      // Still success - user can use the code even if email failed
-      console.log('[ForgotPassword] Continuing anyway - OTP is saved in database');
-    }
+    // Send OTP email (fire-and-forget - don't block the response)
+    emailService.sendPasswordResetOTP(email, otp, user.name)
+      .then(() => {
+        console.log(`[ForgotPassword] ✅ Email sent successfully to ${email}`);
+      })
+      .catch((emailError) => {
+        console.error(`[ForgotPassword] ⚠️  Failed to send email to ${email}:`, emailError.message);
+        // Log but don't fail - OTP is already saved in database
+        console.log('[ForgotPassword] OTP is saved in database, user can still reset password');
+      });
 
     // Response - don't reveal OTP in API response
     console.log('[ForgotPassword] === REQUEST COMPLETED SUCCESSFULLY ===');
