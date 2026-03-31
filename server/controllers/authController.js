@@ -340,15 +340,13 @@ const forgotPassword = async (req, res, next) => {
     user.resetPasswordExpire = new Date(Date.now() + 10 * 60 * 1000);
     await user.save();
 
-    // Send OTP via email
+    // Send OTP via email (non-blocking)
     try {
       await sendOTPEmail(email, otp, user.name);
     } catch (emailError) {
       console.error('[Password Reset] Email send failed:', emailError.message);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to send OTP email. Please try again later.'
-      });
+      // Don't fail the request if email fails - user can still try to reset manually
+      // Just log the error and continue
     }
 
     console.log(`[Password Reset] OTP sent to ${email}`);

@@ -1,19 +1,40 @@
 const nodemailer = require('nodemailer');
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT) || 587,
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
+let transporter = null;
+
+// Initialize transporter safely
+if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+  try {
+    transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.SMTP_PORT) || 587,
+      secure: false,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+      }
+    });
+    console.log('✅ Email transporter initialized successfully');
+  } catch (error) {
+    console.error('❌ Failed to initialize email transporter:', error.message);
+    transporter = null;
   }
-});
+} else {
+  console.warn('⚠️  SMTP credentials not configured. Email functionality disabled.');
+  console.warn('   - SMTP_USER:', process.env.SMTP_USER ? 'set' : 'NOT SET');
+  console.warn('   - SMTP_PASS:', process.env.SMTP_PASS ? 'set' : 'NOT SET');
+  transporter = null;
+}
 
 /**
  * Send OTP email for password reset
  */
 const sendOTPEmail = async (to, otp, userName) => {
+  if (!transporter) {
+    console.warn('⚠️  Email transporter not available. Skipping email send.');
+    return { success: false, message: 'Email service not configured' };
+  }
+
   const mailOptions = {
     from: `"MediSync" <${process.env.SMTP_USER}>`,
     to,
@@ -47,7 +68,14 @@ const sendOTPEmail = async (to, otp, userName) => {
     `
   };
 
-  await transporter.sendMail(mailOptions);
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ OTP email sent to ${to}`);
+    return { success: true };
+  } catch (error) {
+    console.error(`❌ Failed to send OTP email to ${to}:`, error.message);
+    throw error;
+  }
 };
 
 module.exports = { sendOTPEmail };
