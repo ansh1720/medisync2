@@ -16,8 +16,11 @@ function ForgotPassword() {
 
   const handleSendOTP = async (e) => {
     e.preventDefault();
+    console.log('[ForgotPassword.handleSendOTP] === SEND OTP STARTED ===');
+    console.log('[ForgotPassword.handleSendOTP] Email entered:', email);
 
     if (!email) {
+      console.log('[ForgotPassword.handleSendOTP] Email validation failed - empty');
       toast.error('Please enter your email address');
       return;
     }
@@ -25,26 +28,40 @@ function ForgotPassword() {
     setIsLoading(true);
     try {
       // First, wake up the server with a health check
+      console.log('[ForgotPassword.handleSendOTP] Attempting health check...');
       toast.loading('Connecting to server...');
       try {
-        await fetch('https://medisync-api-9043.onrender.com/api', { 
+        console.log('[ForgotPassword.handleSendOTP] Fetching health endpoint...');
+        const healthResponse = await fetch('https://medisync-api-9043.onrender.com/api', { 
           method: 'GET',
           timeout: 60000 
         });
+        console.log('[ForgotPassword.handleSendOTP] ✓ Health check success:', healthResponse.status);
       } catch (healthCheckError) {
-        console.warn('Health check failed, proceeding anyway:', healthCheckError);
+        console.warn('[ForgotPassword.handleSendOTP] Health check failed:', healthCheckError.message);
+        console.warn('[ForgotPassword.handleSendOTP] Proceeding anyway...');
       }
 
       // Now send the actual OTP request
+      console.log('[ForgotPassword.handleSendOTP] Sending forgotPassword API request...');
       const response = await authAPI.forgotPassword({ email });
+      console.log('[ForgotPassword.handleSendOTP] ✓ API response received:', response.data);
       
       if (response.data?.success) {
+        console.log('[ForgotPassword.handleSendOTP] Success! Moving to step 2');
         toast.success('OTP has been sent to your email!');
         setStep(2);
       }
     } catch (error) {
-      console.error('Forgot password error:', error);
-      toast.error(error.response?.data?.message || 'Failed to send OTP. Please try again.');
+      console.error('[ForgotPassword.handleSendOTP] === ERROR OCCURRED ===');
+      console.error('[ForgotPassword.handleSendOTP] Error name:', error.name);
+      console.error('[ForgotPassword.handleSendOTP] Error message:', error.message);
+      console.error('[ForgotPassword.handleSendOTP] Error code:', error.code);
+      console.error('[ForgotPassword.handleSendOTP] Response status:', error.response?.status);
+      console.error('[ForgotPassword.handleSendOTP] Response data:', error.response?.data);
+      console.error('[ForgotPassword.handleSendOTP] Full error:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to send OTP. Please try again.';
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -52,33 +69,48 @@ function ForgotPassword() {
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
+    console.log('[ForgotPassword.handleResetPassword] === RESET PASSWORD STARTED ===');
+    console.log('[ForgotPassword.handleResetPassword] Email:', email);
+    console.log('[ForgotPassword.handleResetPassword] OTP length:', otp.length);
 
     if (!otp || otp.length !== 6) {
+      console.log('[ForgotPassword.handleResetPassword] OTP validation failed:', otp);
       toast.error('Please enter the 6-digit OTP');
       return;
     }
 
     if (newPassword.length < 6) {
+      console.log('[ForgotPassword.handleResetPassword] Password too short:', newPassword.length);
       toast.error('Password must be at least 6 characters');
       return;
     }
 
     if (newPassword !== confirmPassword) {
+      console.log('[ForgotPassword.handleResetPassword] Passwords do not match');
       toast.error('Passwords do not match');
       return;
     }
 
     setIsLoading(true);
     try {
+      console.log('[ForgotPassword.handleResetPassword] Sending resetPassword API request...');
       const response = await authAPI.resetPassword({ email, otp, newPassword });
+      console.log('[ForgotPassword.handleResetPassword] ✓ API response received:', response.data);
       
       if (response.data?.success) {
+        console.log('[ForgotPassword.handleResetPassword] ✓ Password reset successful! Redirecting to login...');
         toast.success('Password reset successfully! Please login with your new password.');
         navigate('/login');
       }
     } catch (error) {
-      console.error('Reset password error:', error);
-      toast.error(error.response?.data?.message || 'Failed to reset password. Please try again.');
+      console.error('[ForgotPassword.handleResetPassword] === ERROR OCCURRED ===');
+      console.error('[ForgotPassword.handleResetPassword] Error name:', error.name);
+      console.error('[ForgotPassword.handleResetPassword] Error message:', error.message);
+      console.error('[ForgotPassword.handleResetPassword] Response status:', error.response?.status);
+      console.error('[ForgotPassword.handleResetPassword] Response data:', error.response?.data);
+      console.error('[ForgotPassword.handleResetPassword] Full error:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to reset password. Please try again.';
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }

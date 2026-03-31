@@ -15,8 +15,15 @@ class EmailService {
   init() {
     try {
       // Check if SMTP credentials are available
+      console.log('[EmailService] Checking SMTP configuration...');
+      console.log('[EmailService] SMTP_USER:', process.env.SMTP_USER ? 'SET' : 'NOT SET');
+      console.log('[EmailService] SMTP_PASS:', process.env.SMTP_PASS ? 'SET' : 'NOT SET');
+      console.log('[EmailService] SMTP_HOST:', process.env.SMTP_HOST || 'smtp.gmail.com');
+      console.log('[EmailService] SMTP_PORT:', process.env.SMTP_PORT || 587);
+      
       if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-        console.warn('⚠️  Email service: SMTP credentials not configured');
+        console.warn('⚠️  [EmailService] SMTP credentials not configured! Email sending will be skipped.');
+        console.warn('⚠️  [EmailService] Please set SMTP_USER and SMTP_PASS environment variables.');
         this.initialized = false;
         return;
       }
@@ -33,9 +40,10 @@ class EmailService {
       });
 
       this.initialized = true;
-      console.log('✅ Email service initialized');
+      console.log('✅ [EmailService] Email service initialized successfully');
     } catch (error) {
-      console.error('❌ Failed to initialize email service:', error.message);
+      console.error('❌ [EmailService] Failed to initialize email service:', error.message);
+      console.error('[EmailService] Error details:', error);
       this.initialized = false;
     }
   }
@@ -47,8 +55,13 @@ class EmailService {
    * @param {string} userName - User's name
    */
   async sendPasswordResetOTP(toEmail, otp, userName = 'User') {
+    console.log(`[EmailService.sendPasswordResetOTP] Starting email send to ${toEmail}`);
+    console.log(`[EmailService.sendPasswordResetOTP] Service initialized: ${this.initialized}`);
+    console.log(`[EmailService.sendPasswordResetOTP] Transporter exists: ${!!this.transporter}`);
+    
     if (!this.initialized || !this.transporter) {
-      console.warn('⚠️  Email service not initialized, skipping email send');
+      console.warn('⚠️  [EmailService.sendPasswordResetOTP] Email service not initialized, skipping email send');
+      console.warn('⚠️  [EmailService.sendPasswordResetOTP] OTP will NOT be sent via email, but password reset may still work');
       return;
     }
 
@@ -117,11 +130,17 @@ class EmailService {
     };
 
     try {
-      await this.transporter.sendMail(mailOptions);
-      console.log(`✅ Password reset OTP sent to ${toEmail}`);
+      console.log(`[EmailService.sendPasswordResetOTP] Attempting to send email via nodemailer...`);
+      const result = await this.transporter.sendMail(mailOptions);
+      console.log(`✅ [EmailService.sendPasswordResetOTP] Password reset OTP sent to ${toEmail}`);
+      console.log(`[EmailService.sendPasswordResetOTP] Email sent with messageId: ${result.messageId}`);
       return { success: true };
     } catch (error) {
-      console.error(`❌ Failed to send OTP email to ${toEmail}:`, error.message);
+      console.error(`❌ [EmailService.sendPasswordResetOTP] Failed to send OTP email to ${toEmail}`);
+      console.error(`[EmailService.sendPasswordResetOTP] Error type: ${error.name}`);
+      console.error(`[EmailService.sendPasswordResetOTP] Error message: ${error.message}`);
+      console.error(`[EmailService.sendPasswordResetOTP] Error code: ${error.code}`);
+      console.error(`[EmailService.sendPasswordResetOTP] Full error:`, error);
       throw error;
     }
   }
