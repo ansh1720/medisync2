@@ -26,9 +26,21 @@ function BookingPage() {
 
   // Payment
   const [paymentMethod, setPaymentMethod] = useState('credit_card');
+  
+  // Razorpay integration
+  const [consultationId, setConsultationId] = useState(null);
 
   // Step tracker
   const [step, setStep] = useState(1); // 1: date/time, 2: symptoms, 3: payment & confirm
+
+  // Load Razorpay script
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    document.body.appendChild(script);
+    return () => document.body.removeChild(script);
+  }, []);
 
   useEffect(() => {
     fetchDoctor();
@@ -68,6 +80,61 @@ function BookingPage() {
     }
   };
 
+  const handleRazorpayPayment = async (cId) => {
+    try {
+      // Step 1: Initiate payment and get Razorpay order details
+      const paymentRes = await consultationAPI.initiatePayment(cId);
+      const { orderId, amount, currency, patientName, patientEmail } = paymentRes.data.data;
+
+      // Step 2: Open Razorpay checkout
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'YOUR_RAZORPAY_KEY_ID',
+        amount: amount * 100, // amount in paise
+        currency: currency,
+        order_id: orderId,
+        name: 'MediSync',
+        description: `Consultation with Dr. ${doctor?.name}`,
+        prefill: {
+          email: patientEmail,
+          contact: '', // User can enter during checkout
+          name: patientName
+        },
+        theme: {
+          color: '#2563eb'
+        },
+        handler: async (response) => {
+          // Payment successful, verify signature on backend
+          try {
+            const verifyRes = await consultationAPI.verifyPayment(cId, {
+              orderId: response.razorpay_order_id,
+              paymentId: response.razorpay_payment_id,
+              signature: response.razorpay_signature
+            });
+
+            if (verifyRes.data.success) {
+              toast.success('Payment successful! Consultation confirmed.');
+              navigate('/consultation/history');
+            }
+          } catch (verifyErr) {
+            toast.error('Payment verification failed. Please contact support.');
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            toast.error('Payment cancelled');
+            setBooking(false);
+          }
+        }
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to initiate payment');
+      setBooking(false);
+    }
+  };
+
   const handleBook = async () => {
     if (!selectedSlot) return toast.error('Please select a time slot');
     if (!chiefComplaint.trim()) return toast.error('Please describe your main concern');
@@ -85,28 +152,30 @@ function BookingPage() {
         consultationType: 'video_call'
       });
 
-      const consultationId = res.data.data._id;
+      const cId = res.data.data._id;
+      setConsultationId(cId);
 
       // Upload attached files if any
       if (attachedFiles.length > 0) {
         const formData = new FormData();
         attachedFiles.forEach(file => formData.append('files', file));
         try {
-          await consultationAPI.uploadDocuments(consultationId, formData);
+          await consultationAPI.uploadDocuments(cId, formData);
           toast.success(`${attachedFiles.length} file(s) uploaded`);
         } catch (uploadErr) {
-          console.error('File upload failed:', uploadErr);
-          toast.error('Booking created but file upload failed. You can upload later.');
+          toast.error('File upload failed. Continuing with booking...');
         }
       }
 
-      // If there's a fee, simulate payment
+      // If there's a fee, initiate Razorpay payment
       if (doctor?.consultationFee?.amount > 0) {
-        await consultationAPI.payConsultation(consultationId, paymentMethod);
+        await handleRazorpayPayment(cId);
+      } else {
+        // No fee, just mark as paid and redirect
+        await consultationAPI.payConsultation(cId, paymentMethod);
+        toast.success('Consultation booked successfully!');
+        navigate('/consultation/history');
       }
-
-      toast.success('Consultation booked successfully!');
-      navigate(`/consultation/history`);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to book consultation');
     } finally {

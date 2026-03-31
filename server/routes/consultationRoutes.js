@@ -48,7 +48,13 @@ router.post('/:id/prescription',    requireRole(['doctor']), c.addPrescription);
 router.get('/:id',                   c.getConsultation);
 router.post('/:id/join',            c.joinConsultation);
 router.post('/:id/cancel',          c.cancelConsultation);
+
+// ── Payment endpoints ──
+router.post('/:id/initiate-payment', c.initiatePayment);
+router.post('/:id/verify-payment',  c.verifyPayment);
 router.post('/:id/pay',             c.payConsultation);
+
+// ── Feedback & other ──
 router.post('/:id/feedback',        c.addFeedback);
 router.put('/:id/pre-consultation', c.updatePreConsultation);
 router.post('/:id/documents',       upload.array('files', 5), c.uploadDocuments);

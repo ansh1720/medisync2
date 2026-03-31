@@ -97,6 +97,10 @@ export const consultationAPI = {
   getMyConsultations: (params) => api.get('/consultation/my-consultations', { params }),
   getConsultation: (id) => api.get(`/consultation/${id}`),
   cancelConsultation: (id, reason) => api.post(`/consultation/${id}/cancel`, { reason }),
+  
+  // Payment endpoints
+  initiatePayment: (id) => api.post(`/consultation/${id}/initiate-payment`),
+  verifyPayment: (id, data) => api.post(`/consultation/${id}/verify-payment`, data),
   payConsultation: (id, method) => api.post(`/consultation/${id}/pay`, { method }),
   addFeedback: (id, data) => api.post(`/consultation/${id}/feedback`, data),
   updatePreConsultation: (id, data) => api.put(`/consultation/${id}/pre-consultation`, data),

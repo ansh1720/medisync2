@@ -55,7 +55,9 @@ const consultationSchema = new mongoose.Schema({
     currency: { type: String, enum: ['USD', 'EUR', 'GBP', 'INR'], default: 'USD' },
     status: { type: String, enum: ['pending', 'paid', 'refunded', 'failed'], default: 'pending' },
     method: { type: String },
-    paidAt: Date
+    paidAt: Date,
+    razorpayOrderId: String,
+    razorpayPaymentId: String
   },
 
   // ── Video Session ──

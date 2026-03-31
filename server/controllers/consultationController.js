@@ -6,7 +6,9 @@
 
 const Consultation = require('../models/Consultation');
 const Doctor = require('../models/Doctor');
+const User = require('../models/User');
 const { getIO } = require('../utils/socket');
+const razorpay = require('../utils/razorpay');
 
 // ─── Helper: safe socket emit (never crashes if socket isn't ready) ───
 const emitSafe = (room, event, data) => {
@@ -409,7 +411,112 @@ exports.cancelConsultation = async (req, res) => {
 };
 
 // ────────────────────────────────────────────
-// 12. POST /:id/pay – mark payment as paid
+// 12. POST /:id/initiate-payment – Create Razorpay order
+// ────────────────────────────────────────────
+exports.initiatePayment = async (req, res) => {
+  try {
+    const consultation = await Consultation.findById(req.params.id)
+      .populate('userId', 'name email');
+
+    if (!consultation) {
+      return res.status(404).json({ success: false, message: 'Consultation not found' });
+    }
+
+    // Verify the user owns this consultation
+    if (consultation.userId._id.toString() !== req.user.userId) {
+      return res.status(403).json({ success: false, message: 'Not your consultation' });
+    }
+
+    // Check if already paid
+    if (consultation.payment?.status === 'paid') {
+      return res.status(400).json({ success: false, message: 'Consultation already paid' });
+    }
+
+    // Check if there's an amount to pay
+    if (!consultation.payment?.amount || consultation.payment.amount === 0) {
+      return res.status(400).json({ success: false, message: 'No payment required for this consultation' });
+    }
+
+    // Create Razorpay order
+    const order = await razorpay.createOrder(
+      consultation.payment.amount,
+      consultation._id.toString(),
+      consultation.userId.email,
+      consultation.userId.name
+    );
+
+    res.json({
+      success: true,
+      data: {
+        orderId: order.id,
+        amount: consultation.payment.amount,
+        currency: consultation.payment.currency,
+        consultationId: consultation._id,
+        patientName: consultation.userId.name,
+        patientEmail: consultation.userId.email
+      },
+      message: 'Payment order created'
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message || 'Failed to initiate payment' });
+  }
+};
+
+// ────────────────────────────────────────────
+// 13. POST /:id/verify-payment – Verify Razorpay signature and mark as paid
+// ────────────────────────────────────────────
+exports.verifyPayment = async (req, res) => {
+  try {
+    const { orderId, paymentId, signature } = req.body;
+
+    // Verify signature
+    const isValidSignature = razorpay.verifyPaymentSignature(orderId, paymentId, signature);
+    
+    if (!isValidSignature) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment signature verification failed. Payment not verified.'
+      });
+    }
+
+    // Find consultation and update payment status
+    const consultation = await Consultation.findById(req.params.id);
+
+    if (!consultation) {
+      return res.status(404).json({ success: false, message: 'Consultation not found' });
+    }
+
+    if (consultation.userId.toString() !== req.user.userId) {
+      return res.status(403).json({ success: false, message: 'Not your consultation' });
+    }
+
+    // Mark as paid
+    consultation.payment.status = 'paid';
+    consultation.payment.method = 'razorpay';
+    consultation.payment.paidAt = new Date();
+    consultation.payment.razorpayOrderId = orderId;
+    consultation.payment.razorpayPaymentId = paymentId;
+    
+    await consultation.save();
+
+    // Notify doctor that payment is confirmed
+    emitSafe(`doctor_${consultation.doctorId}`, 'consultation_payment_confirmed', {
+      consultationId: consultation._id,
+      orderId
+    });
+
+    res.json({
+      success: true,
+      data: consultation,
+      message: 'Payment verified and consultation confirmed'
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message || 'Payment verification failed' });
+  }
+};
+
+// ────────────────────────────────────────────
+// 14. POST /:id/pay – Legacy payment marking (kept for backward compatibility)
 // ────────────────────────────────────────────
 exports.payConsultation = async (req, res) => {
   try {
@@ -419,20 +526,21 @@ exports.payConsultation = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Not your consultation' });
     }
 
-    consultation.payment.status = 'paid';
-    consultation.payment.method = req.body.method || 'credit_card';
-    consultation.payment.paidAt = new Date();
-    await consultation.save();
+    // If no payment required, just mark as paid
+    if (!consultation.payment?.amount || consultation.payment.amount === 0) {
+      consultation.payment.status = 'paid';
+      consultation.payment.paidAt = new Date();
+      await consultation.save();
+    }
 
     res.json({ success: true, data: consultation, message: 'Payment successful' });
   } catch (err) {
-    console.error('payConsultation error:', err);
     res.status(500).json({ success: false, message: 'Payment failed' });
   }
 };
 
 // ────────────────────────────────────────────
-// 13. POST /:id/feedback – patient leaves feedback
+// 15. POST /:id/feedback – patient leaves feedback
 // ────────────────────────────────────────────
 exports.addFeedback = async (req, res) => {
   try {
@@ -476,7 +584,7 @@ exports.addFeedback = async (req, res) => {
 };
 
 // ────────────────────────────────────────────
-// 14. PUT /:id/pre-consultation – update symptoms / upload info before call
+// 16. PUT /:id/pre-consultation – update symptoms / upload info before call
 // ────────────────────────────────────────────
 exports.updatePreConsultation = async (req, res) => {
   try {
