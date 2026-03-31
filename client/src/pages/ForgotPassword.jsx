@@ -24,6 +24,18 @@ function ForgotPassword() {
 
     setIsLoading(true);
     try {
+      // First, wake up the server with a health check
+      toast.loading('Connecting to server...');
+      try {
+        await fetch('https://medisync-api-9043.onrender.com/api', { 
+          method: 'GET',
+          timeout: 60000 
+        });
+      } catch (healthCheckError) {
+        console.warn('Health check failed, proceeding anyway:', healthCheckError);
+      }
+
+      // Now send the actual OTP request
       const response = await authAPI.forgotPassword({ email });
       
       if (response.data?.success) {
@@ -136,7 +148,10 @@ function ForgotPassword() {
               className="btn btn-primary w-full flex justify-center py-3"
             >
               {isLoading ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  <span>Waking up server and sending OTP...</span>
+                </div>
               ) : (
                 'Send Verification Code'
               )}

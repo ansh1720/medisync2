@@ -60,8 +60,8 @@ export const authAPI = {
   getProfile: () => api.get('/auth/profile'),
   updateProfile: (data) => api.put('/auth/profile', data),
   changePassword: (data) => api.put('/auth/change-password', data),
-  forgotPassword: (data) => api.post('/auth/forgot-password', data, { timeout: 120000 }), // 2 minute timeout for server wakeup
-  resetPassword: (data) => api.post('/auth/reset-password', data),
+  forgotPassword: (data) => api.post('/auth/forgot-password', data, { timeout: 60000 }), // 60s timeout
+  resetPassword: (data) => api.post('/auth/reset-password', data, { timeout: 30000 }),
 };
 
 // Risk Assessment API
