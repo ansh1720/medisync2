@@ -92,12 +92,17 @@ function BookingPage() {
 
   const handleRazorpayPayment = async (cId) => {
     try {
+      console.log('[Payment] Starting payment for consultation:', cId);
+      
       // Show selected payment method
       toast.loading(`Processing payment via ${getMethodDisplayName(paymentMethod)}...`);
 
       // Fetch Razorpay key from backend (works in both dev and production)
+      console.log('[Payment] Fetching Razorpay key...');
       const configRes = await authAPI.getConfig();
       const razorpayKey = configRes.data?.data?.razorpayKeyId;
+      
+      console.log('[Payment] Razorpay key received:', razorpayKey ? 'YES' : 'NO');
       
       if (!razorpayKey) {
         toast.dismiss();
@@ -107,7 +112,10 @@ function BookingPage() {
       }
 
       // Step 1: Initiate payment and get Razorpay order details
+      console.log('[Payment] Initiating payment order...');
       const paymentRes = await consultationAPI.initiatePayment(cId);
+      console.log('[Payment] Order created:', paymentRes.data.data);
+      
       const { orderId, amount, currency, patientName, patientEmail } = paymentRes.data.data;
 
       // Map payment methods to Razorpay method names
@@ -171,6 +179,9 @@ function BookingPage() {
       const rzp = new window.Razorpay(options);
       rzp.open();
     } catch (err) {
+      console.error('[Payment] Error:', err);
+      console.error('[Payment] Error message:', err.message);
+      console.error('[Payment] Error response:', err.response?.data);
       toast.dismiss();
       toast.error(err.response?.data?.message || 'Failed to initiate payment');
       setBooking(false);
@@ -182,6 +193,7 @@ function BookingPage() {
     if (!chiefComplaint.trim()) return toast.error('Please describe your main concern');
 
     try {
+      console.log('[Booking] Starting booking process...');
       setBooking(true);
       const scheduledAt = new Date(`${selectedDate}T${selectedSlot}:00`);
 
@@ -195,6 +207,8 @@ function BookingPage() {
       });
 
       const cId = res.data.data._id;
+      console.log('[Booking] Consultation created:', cId);
+      console.log('[Booking] Doctor fee:', doctor?.consultationFee?.amount);
       setConsultationId(cId);
 
       // Upload attached files if any
@@ -211,14 +225,17 @@ function BookingPage() {
 
       // If there's a fee, initiate Razorpay payment
       if (doctor?.consultationFee?.amount > 0) {
+        console.log('[Booking] Fee detected, initiating Razorpay payment...');
         await handleRazorpayPayment(cId);
       } else {
+        console.log('[Booking] No fee, marking as paid...');
         // No fee, just mark as paid and redirect
         await consultationAPI.payConsultation(cId, paymentMethod);
         toast.success('Consultation booked successfully!');
         navigate('/consultation/history');
       }
     } catch (err) {
+      console.error('[Booking] Error:', err);
       toast.error(err.response?.data?.message || 'Failed to book consultation');
     } finally {
       setBooking(false);
