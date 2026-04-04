@@ -24,23 +24,36 @@ const getRazorpayInstance = () => {
 
 /**
  * Create a Razorpay order for consultation booking
- * @param {number} amount - Amount in smallest currency unit (paise for INR)
+ * @param {number} amount - Amount in rupees
  * @param {string} consultationId - Consultation ID for reference
  * @param {string} userEmail - Patient email
  * @param {string} userName - Patient name
+ * @param {string} currency - Currency code (default: 'INR')
  * @returns {Promise<Object>} Order details
  */
-exports.createOrder = async (amount, consultationId, userEmail, userName) => {
+exports.createOrder = async (amount, consultationId, userEmail, userName, currency = 'INR') => {
   try {
     const razorpay = getRazorpayInstance();
+    
+    // Razorpay only supports specific currencies: INR, USD, GBP, etc.
+    // If currency is USD, convert to INR (1 USD ≈ 83 INR)
+    let finalAmount = amount;
+    let finalCurrency = currency.toUpperCase();
+    
+    if (finalCurrency === 'USD') {
+      finalAmount = Math.round(amount * 83); // Convert USD to INR
+      finalCurrency = 'INR';
+    }
+    
     const options = {
-      amount: Math.round(amount * 100), // convert to paise
-      currency: 'INR',
+      amount: Math.round(finalAmount * 100), // convert to paise
+      currency: finalCurrency,
       receipt: consultationId,
       notes: {
         consultationId,
         userEmail,
-        userName
+        userName,
+        originalCurrency: currency
       }
     };
 

@@ -437,20 +437,21 @@ exports.initiatePayment = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No payment required for this consultation' });
     }
 
-    // Create Razorpay order
+    // Create Razorpay order (pass currency for conversion if needed)
     const order = await razorpay.createOrder(
       consultation.payment.amount,
       consultation._id.toString(),
       consultation.userId.email,
-      consultation.userId.name
+      consultation.userId.name,
+      consultation.payment.currency || 'INR'
     );
 
     res.json({
       success: true,
       data: {
         orderId: order.id,
-        amount: consultation.payment.amount,
-        currency: consultation.payment.currency,
+        amount: order.amount / 100, // convert back from paise to rupees/currency
+        currency: 'INR', // Razorpay will always process in INR
         consultationId: consultation._id,
         patientName: consultation.userId.name,
         patientEmail: consultation.userId.email
