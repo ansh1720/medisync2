@@ -82,13 +82,21 @@ function BookingPage() {
 
   const handleRazorpayPayment = async (cId) => {
     try {
+      const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
+      
+      if (!razorpayKey || razorpayKey === 'YOUR_RAZORPAY_KEY_ID') {
+        toast.error('Razorpay is not configured. Please contact support.');
+        setBooking(false);
+        return;
+      }
+
       // Step 1: Initiate payment and get Razorpay order details
       const paymentRes = await consultationAPI.initiatePayment(cId);
       const { orderId, amount, currency, patientName, patientEmail } = paymentRes.data.data;
 
       // Step 2: Open Razorpay checkout
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'YOUR_RAZORPAY_KEY_ID',
+        key: razorpayKey,
         amount: amount * 100, // amount in paise
         currency: currency,
         order_id: orderId,
