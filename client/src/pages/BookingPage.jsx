@@ -80,13 +80,27 @@ function BookingPage() {
     }
   };
 
+  const getMethodDisplayName = (method) => {
+    const methodMap = {
+      credit_card: 'Credit Card',
+      debit_card: 'Debit Card',
+      upi: 'UPI',
+      wallet: 'Wallet'
+    };
+    return methodMap[method] || method;
+  };
+
   const handleRazorpayPayment = async (cId) => {
     try {
+      // Show selected payment method
+      toast.loading(`Processing payment via ${getMethodDisplayName(paymentMethod)}...`);
+
       // Fetch Razorpay key from backend (works in both dev and production)
       const configRes = await authAPI.getConfig();
       const razorpayKey = configRes.data?.data?.razorpayKeyId;
       
       if (!razorpayKey) {
+        toast.dismiss();
         toast.error('Payment system is not configured. Please contact support.');
         setBooking(false);
         return;
@@ -96,7 +110,16 @@ function BookingPage() {
       const paymentRes = await consultationAPI.initiatePayment(cId);
       const { orderId, amount, currency, patientName, patientEmail } = paymentRes.data.data;
 
-      // Step 2: Open Razorpay checkout
+      // Map payment methods to Razorpay method names
+      const methodMap = {
+        credit_card: 'card',
+        debit_card: 'card',
+        upi: 'upi',
+        wallet: 'wallet'
+      };
+      const razorpayMethod = methodMap[paymentMethod] || 'card';
+
+      // Step 2: Open Razorpay checkout with selected payment method
       const options = {
         key: razorpayKey,
         amount: amount * 100, // amount in paise
@@ -112,26 +135,34 @@ function BookingPage() {
         theme: {
           color: '#2563eb'
         },
+        // Restrict to selected payment method
+        method: {
+          [razorpayMethod]: 1  // Enable only the selected method
+        },
         handler: async (response) => {
           // Payment successful, verify signature on backend
           try {
             const verifyRes = await consultationAPI.verifyPayment(cId, {
               orderId: response.razorpay_order_id,
               paymentId: response.razorpay_payment_id,
-              signature: response.razorpay_signature
+              signature: response.razorpay_signature,
+              method: paymentMethod // Send user's selected method
             });
 
             if (verifyRes.data.success) {
-              toast.success('Payment successful! Consultation confirmed.');
+              toast.dismiss();
+              toast.success(`Payment successful via ${getMethodDisplayName(paymentMethod)}! Consultation confirmed.`);
               navigate('/consultation/history');
             }
           } catch (verifyErr) {
+            toast.dismiss();
             toast.error('Payment verification failed. Please contact support.');
           }
         },
         modal: {
           ondismiss: () => {
-            toast.error('Payment cancelled');
+            toast.dismiss();
+            toast.error(`Payment cancelled - ${getMethodDisplayName(paymentMethod)} not used`);
             setBooking(false);
           }
         }
@@ -140,6 +171,7 @@ function BookingPage() {
       const rzp = new window.Razorpay(options);
       rzp.open();
     } catch (err) {
+      toast.dismiss();
       toast.error(err.response?.data?.message || 'Failed to initiate payment');
       setBooking(false);
     }
@@ -515,7 +547,7 @@ function BookingPage() {
                 disabled={booking}
                 className="px-8 py-2.5 bg-green-600 text-white rounded-lg font-medium disabled:opacity-50 hover:bg-green-700 transition"
               >
-                {booking ? 'Booking...' : doctor?.consultationFee?.amount > 0 ? 'Pay & Book' : 'Confirm Booking'}
+                {booking ? 'Booking...' : doctor?.consultationFee?.amount > 0 ? `Pay via ${getMethodDisplayName(paymentMethod)} & Book` : 'Confirm Booking'}
               </button>
             </div>
           </div>
