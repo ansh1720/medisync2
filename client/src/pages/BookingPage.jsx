@@ -127,7 +127,7 @@ function BookingPage() {
       };
       const razorpayMethod = methodMap[paymentMethod] || 'card';
 
-      // Step 2: Open Razorpay checkout with selected payment method
+      // Step 2: Open Razorpay checkout
       const options = {
         key: razorpayKey,
         amount: amount * 100, // amount in paise
@@ -143,10 +143,8 @@ function BookingPage() {
         theme: {
           color: '#2563eb'
         },
-        // Restrict to selected payment method
-        method: {
-          [razorpayMethod]: 1  // Enable only the selected method
-        },
+        // Note: Razorpay Checkout shows all methods for better UX
+        // User selected method is shown above as visual preference only
         handler: async (response) => {
           // Payment successful, verify signature on backend
           try {
@@ -154,7 +152,7 @@ function BookingPage() {
               orderId: response.razorpay_order_id,
               paymentId: response.razorpay_payment_id,
               signature: response.razorpay_signature,
-              method: paymentMethod // Send user's selected method
+              method: paymentMethod // Send user's selected method preference
             });
 
             if (verifyRes.data.success) {
@@ -170,7 +168,7 @@ function BookingPage() {
         modal: {
           ondismiss: () => {
             toast.dismiss();
-            toast.error(`Payment cancelled - ${getMethodDisplayName(paymentMethod)} not used`);
+            toast.error(`Payment cancelled`);
             setBooking(false);
           }
         }
@@ -564,7 +562,7 @@ function BookingPage() {
                 disabled={booking}
                 className="px-8 py-2.5 bg-green-600 text-white rounded-lg font-medium disabled:opacity-50 hover:bg-green-700 transition"
               >
-                {booking ? 'Booking...' : doctor?.consultationFee?.amount > 0 ? `Pay via ${getMethodDisplayName(paymentMethod)} & Book` : 'Confirm Booking'}
+                {booking ? 'Booking...' : doctor?.consultationFee?.amount > 0 ? `Pay & Book` : 'Confirm Booking'}
               </button>
             </div>
           </div>
