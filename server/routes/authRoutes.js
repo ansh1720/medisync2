@@ -7,6 +7,16 @@ const { verifyToken } = require('../middlewares/auth');
 
 const router = express.Router();
 
+// Public endpoint to get configuration (Razorpay key)
+router.get('/config', (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      razorpayKeyId: process.env.RAZORPAY_KEY_ID || null
+    }
+  });
+});
+
 // Test endpoint to verify auth routes are loaded
 router.get('/test', (req, res) => {
   res.json({

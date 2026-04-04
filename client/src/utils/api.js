@@ -47,6 +47,7 @@ api.interceptors.response.use(
 
 // Auth API functions
 export const authAPI = {
+  getConfig: () => api.get('/auth/config', { timeout: 10000 }),
   login: async (credentials) => {
     return api.post('/auth/login', credentials, { timeout: 30000 }); // 30s timeout
   },

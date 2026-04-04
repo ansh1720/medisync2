@@ -82,10 +82,12 @@ function BookingPage() {
 
   const handleRazorpayPayment = async (cId) => {
     try {
-      const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
+      // Fetch Razorpay key from backend (works in both dev and production)
+      const configRes = await authAPI.getConfig();
+      const razorpayKey = configRes.data?.data?.razorpayKeyId;
       
-      if (!razorpayKey || razorpayKey === 'YOUR_RAZORPAY_KEY_ID') {
-        toast.error('Razorpay is not configured. Please contact support.');
+      if (!razorpayKey) {
+        toast.error('Payment system is not configured. Please contact support.');
         setBooking(false);
         return;
       }
