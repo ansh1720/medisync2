@@ -415,28 +415,36 @@ exports.cancelConsultation = async (req, res) => {
 // ────────────────────────────────────────────
 exports.initiatePayment = async (req, res) => {
   try {
+    console.log('[Payment] Initiating payment for consultation:', req.params.id);
+    
     const consultation = await Consultation.findById(req.params.id)
       .populate('userId', 'name email');
 
     if (!consultation) {
+      console.log('[Payment] Consultation not found:', req.params.id);
       return res.status(404).json({ success: false, message: 'Consultation not found' });
     }
 
     // Verify the user owns this consultation
     if (consultation.userId._id.toString() !== req.user.userId) {
+      console.log('[Payment] Unauthorized - user mismatch');
       return res.status(403).json({ success: false, message: 'Not your consultation' });
     }
 
     // Check if already paid
     if (consultation.payment?.status === 'paid') {
+      console.log('[Payment] Consultation already paid');
       return res.status(400).json({ success: false, message: 'Consultation already paid' });
     }
 
     // Check if there's an amount to pay
     if (!consultation.payment?.amount || consultation.payment.amount === 0) {
+      console.log('[Payment] No payment amount:', consultation.payment);
       return res.status(400).json({ success: false, message: 'No payment required for this consultation' });
     }
 
+    console.log('[Payment] Creating order with amount:', consultation.payment.amount, consultation.payment.currency);
+    
     // Create Razorpay order (pass currency for conversion if needed)
     const order = await razorpay.createOrder(
       consultation.payment.amount,
@@ -446,6 +454,8 @@ exports.initiatePayment = async (req, res) => {
       consultation.payment.currency || 'INR'
     );
 
+    console.log('[Payment] Order created:', order.id);
+    
     res.json({
       success: true,
       data: {
@@ -459,6 +469,7 @@ exports.initiatePayment = async (req, res) => {
       message: 'Payment order created'
     });
   } catch (error) {
+    console.error('[Payment] Error initiating payment:', error.message, error.stack);
     res.status(500).json({ success: false, message: error.message || 'Failed to initiate payment' });
   }
 };

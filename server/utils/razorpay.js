@@ -11,12 +11,21 @@ let razorpayInstance = null;
 
 const getRazorpayInstance = () => {
   if (!razorpayInstance) {
-    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    const keyId = process.env.RAZORPAY_KEY_ID;
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    
+    console.log('[Razorpay] Initializing with keys:', {
+      keyId: keyId ? `${keyId.substring(0, 10)}...` : 'MISSING',
+      keySecret: keySecret ? 'SET' : 'MISSING',
+      nodeEnv: process.env.NODE_ENV
+    });
+    
+    if (!keyId || !keySecret) {
       throw new Error('Razorpay API keys not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in environment variables.');
     }
     razorpayInstance = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID,
-      key_secret: process.env.RAZORPAY_KEY_SECRET
+      key_id: keyId,
+      key_secret: keySecret
     });
   }
   return razorpayInstance;
@@ -40,9 +49,12 @@ exports.createOrder = async (amount, consultationId, userEmail, userName, curren
     let finalAmount = amount;
     let finalCurrency = currency.toUpperCase();
     
+    console.log('[Order] Creating order:', { amount, currency, finalAmount, finalCurrency });
+    
     if (finalCurrency === 'USD') {
       finalAmount = Math.round(amount * 83); // Convert USD to INR
       finalCurrency = 'INR';
+      console.log('[Order] Converted USD to INR:', { originalAmount: amount, convertedAmount: finalAmount });
     }
     
     const options = {
@@ -57,9 +69,13 @@ exports.createOrder = async (amount, consultationId, userEmail, userName, curren
       }
     };
 
+    console.log('[Order] Razorpay options:', { amount: options.amount, currency: options.currency });
+    
     const order = await razorpay.orders.create(options);
+    console.log('[Order] Success:', order.id);
     return order;
   } catch (error) {
+    console.error('[Order] Failed:', error.message);
     throw new Error(`Failed to create Razorpay order: ${error.message}`);
   }
 };
