@@ -5,6 +5,7 @@
 
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { isBlacklisted } = require('../utils/tokenBlacklist');
 
 /**
  * Verify JWT token middleware
@@ -33,6 +34,14 @@ const verifyToken = async (req, res, next) => {
     }
 
     const token = tokenParts[1];
+
+    // Check if token is blacklisted
+    if (isBlacklisted(token)) {
+      return res.status(401).json({
+        success: false,
+        message: 'Access denied. Token has been revoked.'
+      });
+    }
 
     // Verify token
     let decoded;

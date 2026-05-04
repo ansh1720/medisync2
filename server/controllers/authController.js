@@ -8,6 +8,7 @@ const { validationResult } = require('express-validator');
 const User = require('../models/User');
 const Doctor = require('../models/Doctor');
 const emailService = require('../utils/emailService');
+const { addToBlacklist } = require('../utils/tokenBlacklist');
 
 /**
  * Generate JWT token
@@ -425,16 +426,37 @@ const resetPassword = async (req, res, next) => {
 };
 
 /**
- * Logout user (client handles token removal)
+ * Logout user (invalidate token)
  * @route POST /api/auth/logout
  */
 const logout = async (req, res) => {
-  // In a stateless JWT system, logout is handled client-side by removing the token
-  // Optionally, you could implement a token blacklist here
-  res.json({
-    success: true,
-    message: 'Logout successful'
-  });
+  try {
+    // Get token from header
+    const token = req.headers.authorization?.split(' ')[1];
+    
+    if (token) {
+      // Calculate remaining token expiration time
+      const decoded = jwt.decode(token);
+      if (decoded && decoded.exp) {
+        const expiresIn = (decoded.exp * 1000) - Date.now();
+        if (expiresIn > 0) {
+          // Add token to blacklist with expiration
+          addToBlacklist(token, expiresIn);
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Logout successful'
+    });
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.json({
+      success: true,
+      message: 'Logout successful'
+    });
+  }
 };
 
 /**

@@ -64,7 +64,7 @@ app.use(cors({
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // Increased limit for development with React StrictMode
+  max: 200, // Production rate limit for medical API
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again later.'
