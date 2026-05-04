@@ -32,7 +32,7 @@ function App() {
   return (
     <AuthProvider>
       <InteractionProvider>
-        <Router>
+        <Router basename="/medisync2">
           <div className="App">
             <Toaster
             position="top-right"
