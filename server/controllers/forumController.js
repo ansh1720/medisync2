@@ -506,17 +506,90 @@ exports.getUserPosts = async (req, res) => {
 
 // Placeholder implementations for remaining methods
 exports.updatePost = async (req, res) => {
-  res.status(501).json({
-    success: false,
-    message: 'Update post functionality not yet implemented'
-  });
+  try {
+    const { title, body, category, tags } = req.body;
+    const postId = req.params.id;
+
+    // Find the post
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({
+        success: false,
+        message: 'Post not found'
+      });
+    }
+
+    // Check ownership
+    if (post.userId.toString() !== req.user.userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to update this post'
+      });
+    }
+
+    // Update allowed fields
+    if (title) post.title = title;
+    if (body) post.body = body;
+    if (category) post.category = category;
+    if (tags) post.tags = tags;
+
+    post.isEdited = true;
+    post.editedAt = new Date();
+
+    await post.save();
+
+    const updated = await Post.findById(postId)
+      .populate('userId', 'name email avatar')
+      .populate('comments.userId', 'name email avatar');
+
+    res.json({
+      success: true,
+      data: updated,
+      message: 'Post updated successfully'
+    });
+  } catch (error) {
+    console.error('Update post error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update post'
+    });
+  }
 };
 
 exports.deletePost = async (req, res) => {
-  res.status(501).json({
-    success: false,
-    message: 'Delete post functionality not yet implemented'
-  });
+  try {
+    const postId = req.params.id;
+
+    // Find the post
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({
+        success: false,
+        message: 'Post not found'
+      });
+    }
+
+    // Check ownership (user or admin)
+    if (post.userId.toString() !== req.user.userId && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to delete this post'
+      });
+    }
+
+    await Post.findByIdAndDelete(postId);
+
+    res.json({
+      success: true,
+      message: 'Post deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete post error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete post'
+    });
+  }
 };
 
 exports.toggleCommentLike = async (req, res) => {
