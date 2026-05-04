@@ -5,12 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MediSync - Redirecting...</title>
   <script>
-    // Single Page App (SPA) redirect for GitHub Pages
-    // This script takes the current URL and redirects to index.html
-    // with the path as a query parameter that the app can read
-    sessionStorage.redirect = location.href;
+    // Extract the requested path (everything after the base path /medisync2/)
+    // and store it to restore it after the SPA loads
+    const fullPath = window.location.pathname + window.location.search + window.location.hash;
+    // Remove the /medisync2/ prefix to get just the route
+    const route = fullPath.replace('/medisync2', '') || '/';
+    // Redirect to index.html with the route as a query parameter
+    window.location.replace('/medisync2/?redirect=' + encodeURIComponent(route));
   </script>
-  <meta http-equiv="refresh" content="0;URL='/medisync2/'">
 </head>
 <body>
   <p>Redirecting...</p>

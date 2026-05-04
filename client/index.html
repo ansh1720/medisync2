@@ -10,12 +10,15 @@
     <title>MediSync - Healthcare Platform</title>
     <script>
       // GitHub Pages SPA routing fix
-      // When a 404 occurs, 404.html redirects here with the original path in sessionStorage
-      // This script restores the original URL so React Router can handle it
-      if (sessionStorage.redirect) {
-        const redirect = sessionStorage.redirect;
-        delete sessionStorage.redirect;
-        window.location.replace(redirect);
+      // When a 404 occurs, 404.html redirects here with the original route as a query parameter
+      // This script extracts that route and prepares React Router to navigate to it
+      const params = new URLSearchParams(window.location.search);
+      const redirectPath = params.get('redirect');
+      if (redirectPath) {
+        // Store the path and update the browser URL without a page reload
+        sessionStorage.setItem('pendingRoute', redirectPath);
+        // Clean up the query parameter from the URL
+        window.history.replaceState({}, document.title, '/medisync2/');
       }
     </script>
   </head>

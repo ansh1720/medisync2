@@ -1,4 +1,5 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import { InteractionProvider } from './context/InteractionContext';
@@ -28,6 +29,21 @@ import DoctorPatients from './pages/DoctorPatients';
 import DoctorVerification from './pages/DoctorVerification';
 import AdminVerifications from './pages/AdminVerifications';
 
+// Handle pending route redirects from GitHub Pages 404.html
+function RouteHandler() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const pendingRoute = sessionStorage.getItem('pendingRoute');
+    if (pendingRoute) {
+      sessionStorage.removeItem('pendingRoute');
+      navigate(pendingRoute, { replace: true });
+    }
+  }, [navigate]);
+
+  return null;
+}
+
 function App() {
   return (
     <AuthProvider>
@@ -50,6 +66,8 @@ function App() {
               },
             }}
           />
+          
+          <RouteHandler />
           
           <Routes>
             <Route path="/login" element={<Login />} />
