@@ -10,10 +10,14 @@ import {
   UserGroupIcon,
   CalendarDaysIcon
 } from '@heroicons/react/24/outline';
+import { useAppointmentReminder } from '../hooks/useAppointmentReminder';
 import Navbar from '../components/Navbar';
 
 function Dashboard() {
   const navigate = useNavigate();
+  // Listen for appointment reminders
+  useAppointmentReminder();
+  
   const [searchQuery, setSearchQuery] = useState('');
 
   const features = [

@@ -29,6 +29,9 @@ app.set('trust proxy', 1);
 const { initializeSocket } = require('./utils/socket');
 const { io, broadcastAlert } = initializeSocket(server);
 
+// Appointment reminder scheduler
+const { startAppointmentReminder } = require('./utils/appointmentReminder');
+
 // Global middleware
 app.use(helmet());
 
@@ -86,6 +89,8 @@ mongoose.connect(process.env.MONGODB_URI || process.env.MONGO_URI, {
 })
 .then(() => {
   console.log('✅ Connected to MongoDB');
+  // Start appointment reminder scheduler after DB connection
+  startAppointmentReminder();
 })
 .catch((error) => {
   console.error('❌ MongoDB connection error:', error);

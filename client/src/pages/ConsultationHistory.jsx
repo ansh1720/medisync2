@@ -2,12 +2,17 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { consultationAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import { useAppointmentReminder } from '../hooks/useAppointmentReminder';
 import Navbar from '../components/Navbar';
 import toast from 'react-hot-toast';
 
 function ConsultationHistory() {
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  // Listen for appointment reminders
+  useAppointmentReminder();
+
   const [consultations, setConsultations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');

@@ -2,12 +2,16 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { consultationAPI, verificationAPI } from '../utils/api';
+import { useAppointmentReminder } from '../hooks/useAppointmentReminder';
 import Navbar from '../components/Navbar';
 import toast from 'react-hot-toast';
 
 function DoctorDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  // Listen for appointment reminders
+  useAppointmentReminder();
 
   const [stats, setStats] = useState(null);
   const [consultations, setConsultations] = useState([]);
