@@ -443,6 +443,11 @@ exports.initiatePayment = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Consultation not found' });
     }
 
+    if (!consultation.userId) {
+      console.log('[Payment] Consultation user reference missing:', req.params.id);
+      return res.status(400).json({ success: false, message: 'Consultation data incomplete' });
+    }
+
     // Verify the user owns this consultation
     if (consultation.userId._id.toString() !== req.user.userId) {
       console.log('[Payment] Unauthorized - user mismatch');

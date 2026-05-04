@@ -199,3 +199,55 @@ exports.getNews = async (req, res) => {
     });
   }
 };
+
+/**
+ * Get health alerts - recent critical news from WHO and CDC
+ */
+exports.getAlerts = async (req, res) => {
+  try {
+    const now = Date.now();
+
+    // Check if cache is valid
+    const isCacheValid = newsCache.lastFetch && (now - newsCache.lastFetch) < newsCache.cacheDuration;
+
+    // Fetch fresh news if cache is invalid or empty
+    if (!isCacheValid || newsCache.articles.length === 0) {
+      console.log('🚨 Fetching health alerts from WHO and CDC...');
+      
+      // Fetch from WHO and CDC only (for critical alerts)
+      const [whoArticles, cdcArticles] = await Promise.all([
+        fetchWHONews(),
+        fetchCDCNews()
+      ]);
+
+      // Combine and sort by date (newest first)
+      newsCache.articles = [
+        ...whoArticles,
+        ...cdcArticles
+      ].sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
+
+      newsCache.lastFetch = now;
+
+      console.log(`✅ Fetched ${newsCache.articles.length} alerts`);
+    }
+
+    // Return only the 5 most recent critical alerts
+    const recentAlerts = newsCache.articles.slice(0, 5);
+
+    res.json({
+      success: true,
+      data: {
+        alerts: recentAlerts,
+        total: newsCache.articles.length,
+        lastUpdated: new Date(newsCache.lastFetch)
+      }
+    });
+
+  } catch (error) {
+    console.error('Get alerts error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error retrieving health alerts'
+    });
+  }
+};

@@ -38,7 +38,10 @@ const register = async (req, res, next) => {
       });
     }
 
-    const { name, email, password, role = 'user', phone, language = 'en' } = req.body;
+    const { name, email, password, phone, language = 'en' } = req.body;
+
+    // Restrict role to user or doctor only (whitelist)
+    const role = 'user'; // Always create as regular user; doctors must verify separately
 
     // Check if user already exists
     const existingUser = await User.findByEmail(email);
@@ -61,31 +64,7 @@ const register = async (req, res, next) => {
 
     await user.save();
 
-    // If role is doctor, create a Doctor document
-    if (role === 'doctor') {
-      try {
-        const doctor = new Doctor({
-          name: user.name,
-          email: user.email,
-          specialty: 'general', // Default, will be updated during verification
-          contact: {
-            phone: phone || '',
-            officeAddress: {
-              country: 'United States'
-            }
-          },
-          userRef: user._id,
-          createdBy: user._id,
-          verificationStatus: 'not_submitted',
-          isVerified: false,
-          isActive: true
-        });
-        await doctor.save();
-      } catch (doctorError) {
-        console.error('Error creating doctor document:', doctorError);
-        // Don't fail registration if doctor creation fails
-      }
-    }
+    // Doctors must be created through verification process, not registration
 
     // Generate token
     const token = generateToken(user._id);

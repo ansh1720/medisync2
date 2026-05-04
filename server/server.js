@@ -52,8 +52,8 @@ app.use(cors({
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      console.warn('CORS blocked origin:', origin);
-      callback(null, true); // Allow in production, log for debugging
+      console.warn('CORS rejected origin:', origin);
+      callback(new Error('CORS policy: origin not allowed'));
     }
   },
   credentials: true,
@@ -112,8 +112,8 @@ app.use('/api/equipment', require('./routes/equipmentRoutes'));
 app.use('/api/hospitals', require('./routes/hospitalRoutes'));
 app.use('/api/consultation', require('./routes/consultationRoutes'));
 app.use('/api/forum', require('./routes/forumRoutes'));
-// Health news from WHO, CDC, and PubMed (v2 endpoint)
-app.use('/api/news/v2', require('./routes/newsRoutes'));
+// Health news from WHO, CDC, and PubMed
+app.use('/api/news', require('./routes/newsRoutes'));
 app.use('/api/verification', require('./routes/verificationRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 

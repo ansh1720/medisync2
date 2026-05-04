@@ -5,6 +5,7 @@
 
 const { validationResult } = require('express-validator');
 const Disease = require('../models/Disease');
+const diseaseParser = require('../utils/diseaseParser');
 
 /**
  * Get diseases with pagination, search, and filters

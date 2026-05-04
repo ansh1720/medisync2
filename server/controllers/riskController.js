@@ -141,7 +141,7 @@ exports.calculateRisk = async (req, res) => {
         additionalInfo,
         riskLevel,
         riskPercentage,
-        normalizedScore,
+        normalizedScore: assessmentResult.normalizedScore,
         breakdown: assessmentResult.breakdown,
         potentialDiseases: assessmentResult.potentialDiseases.map(d => d.id),
         recommendations,
@@ -191,7 +191,7 @@ exports.getRiskHistory = async (req, res) => {
     } = req.query;
 
     // Build filter
-    const filter = { userId: req.user.id };
+    const filter = { userId: req.user.userId };
     
     if (riskLevel) {
       filter.riskLevel = riskLevel;
@@ -285,7 +285,7 @@ exports.getRiskTrends = async (req, res) => {
     const trends = await RiskHistory.aggregate([
       {
         $match: {
-          userId: req.user.id,
+          userId: req.user.userId,
           createdAt: { $gte: startDate }
         }
       },
@@ -330,7 +330,7 @@ exports.getCommonSymptoms = async (req, res) => {
     const { limit = 10 } = req.query;
 
     const commonSymptoms = await RiskHistory.aggregate([
-      { $match: { userId: req.user.id } },
+      { $match: { userId: req.user.userId } },
       { $unwind: '$symptoms' },
       {
         $group: {
