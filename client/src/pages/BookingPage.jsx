@@ -74,7 +74,9 @@ function BookingPage() {
       const slotData = Array.isArray(res.data?.data) ? res.data.data : [];
       setSlots(slotData);
     } catch (err) {
+      console.error('Failed to fetch slots:', err);
       setSlots([]);
+      toast.error('Failed to load available slots');
     } finally {
       setSlotsLoading(false);
     }
@@ -248,7 +250,7 @@ function BookingPage() {
   // Get next 14 days for date picker
   const getMinDate = () => {
     const d = new Date();
-    d.setDate(d.getDate() + 1);
+    // Start from today, not tomorrow
     return d.toISOString().split('T')[0];
   };
   const getMaxDate = () => {
@@ -335,23 +337,31 @@ function BookingPage() {
               ) : slots.length === 0 ? (
                 <p className="text-muted-foreground">No available slots for this date. Try another day.</p>
               ) : (
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-                  {slots.map((slot) => (
-                    <button
-                      key={slot.time}
-                      disabled={!slot.available}
-                      onClick={() => setSelectedSlot(slot.time)}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
-                        !slot.available
-                          ? 'bg-muted text-muted-foreground cursor-not-allowed line-through'
-                          : selectedSlot === slot.time
-                          ? 'bg-primary text-primary-foreground ring-2 ring-primary/30'
-                          : 'border border-border text-foreground hover:bg-accent'
-                      }`}
-                    >
-                      {slot.time}
-                    </button>
-                  ))}
+                <div>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 mb-3">
+                    {slots.map((slot) => (
+                      <button
+                        key={slot.time}
+                        disabled={!slot.available}
+                        onClick={() => setSelectedSlot(slot.time)}
+                        title={!slot.available ? 'This slot is already booked' : `Select ${slot.time}`}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition relative ${
+                          !slot.available
+                            ? 'bg-red-100 text-red-600 cursor-not-allowed opacity-60 border border-red-300'
+                            : selectedSlot === slot.time
+                            ? 'bg-primary text-primary-foreground ring-2 ring-primary/30'
+                            : 'border border-border text-foreground hover:bg-accent'
+                        }`}
+                      >
+                        {slot.time}
+                        {!slot.available && <span className="absolute top-0 right-0 text-xs">✕</span>}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    <span className="inline-block w-3 h-3 bg-red-100 border border-red-300 rounded mr-2 align-middle"></span>
+                    Red slots are already booked
+                  </p>
                 </div>
               )}
             </div>

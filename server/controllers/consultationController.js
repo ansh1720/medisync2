@@ -141,15 +141,33 @@ exports.bookConsultation = async (req, res) => {
     const doctor = await Doctor.findById(doctorId);
     if (!doctor) return res.status(404).json({ success: false, message: 'Doctor not found' });
 
+    // Validate slot is available - check for conflicting consultations
+    const scheduledTime = new Date(scheduledAt);
+    const duration = doctor.preferences?.consultationDuration || 30;
+    const slotEndTime = new Date(scheduledTime.getTime() + duration * 60000);
+
+    const existingConsultation = await Consultation.findOne({
+      doctorId: doctor._id,
+      scheduledAt: scheduledTime,
+      status: { $in: ['requested', 'confirmed', 'in_progress'] }
+    });
+
+    if (existingConsultation) {
+      return res.status(400).json({
+        success: false,
+        message: 'This slot has already been booked. Please select another time.'
+      });
+    }
+
     const consultation = await Consultation.create({
       userId: req.user.userId,
       doctorId,
-      scheduledAt: new Date(scheduledAt),
+      scheduledAt: scheduledTime,
       symptoms: symptoms || [],
       chiefComplaint: chiefComplaint || '',
       additionalNotes: additionalNotes || '',
       consultationType: consultationType || 'video_call',
-      estimatedDuration: doctor.preferences?.consultationDuration || 30,
+      estimatedDuration: duration,
       payment: {
         amount: doctor.consultationFee?.amount || 0,
         currency: doctor.consultationFee?.currency || 'USD',
