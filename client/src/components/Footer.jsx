@@ -69,13 +69,13 @@ function Footer() {
               </li>
               <li className="flex items-center space-x-2">
                 <span className="text-blue-500">📞</span>
-                <span>+1 (555) 019-2834</span>
+                <span>+91 9667758456</span>
               </li>
               <li className="flex items-start space-x-2">
-                <span className="text-blue-500 mt-0.5">📍</span>
+                <span className="text-blue-500 mt-0.5"></span>
                 <span className="leading-relaxed">
                   100 Health Sciences Plaza,<br />
-                  Suite 400, New York, NY 10016
+                  Suite 400, Vapi, Gujarat, India
                 </span>
               </li>
             </ul>
