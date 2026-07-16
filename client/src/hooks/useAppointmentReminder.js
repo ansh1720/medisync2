@@ -9,7 +9,12 @@ import toast from 'react-hot-toast';
 export const useAppointmentReminder = () => {
   useEffect(() => {
     try {
-      const socket = io(process.env.REACT_APP_API_URL || 'https://medisync-api-9043.onrender.com', {
+      const socketUrl = import.meta.env.VITE_API_URL?.replace('/api', '') ||
+        (window.location.hostname === 'ansh1720.github.io'
+          ? 'https://medisync-api-9043.onrender.com'
+          : 'http://localhost:5000');
+
+      const socket = io(socketUrl, {
         reconnection: true,
         reconnectionDelay: 1000,
         reconnectionDelayMax: 5000,

@@ -209,16 +209,24 @@ function DoctorDashboard() {
         {/* Consultations */}
         <div className="bg-card rounded-xl border border-border">
           {/* Tabs */}
-          <div className="flex items-center gap-2 p-4 border-b border-border">
-            <h2 className="text-lg font-semibold text-foreground mr-4">Consultations</h2>
-            {[['all', 'All'], ['upcoming', 'Upcoming'], ['today', 'Today'], ['in_progress', 'In Progress'], ['completed', 'Completed']].map(([key, label]) => (
-              <button key={key} onClick={() => setFilter(key)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                  filter === key ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent'
-                }`}>
-                {label}
-              </button>
-            ))}
+          <div className="flex flex-col md:flex-row md:items-center justify-between p-4 border-b border-border gap-3">
+            <h2 className="text-lg font-semibold text-foreground">Consultations</h2>
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 scrollbar-none -mx-4 px-4 md:mx-0 md:px-0">
+              {[
+                ['all', 'All'],
+                ['upcoming', 'Upcoming'],
+                ['today', 'Today'],
+                ['in_progress', 'In Progress'],
+                ['completed', 'Completed']
+              ].map(([key, label]) => (
+                <button key={key} onClick={() => setFilter(key)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition flex-shrink-0 ${
+                    filter === key ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent'
+                  }`}>
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* List */}
