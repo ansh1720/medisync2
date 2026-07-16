@@ -62,7 +62,6 @@ exports.getPosts = async (req, res) => {
     const [posts, total] = await Promise.all([
       Post.find(filter)
         .populate('userId', 'name')
-        .select('-body') // Exclude full body for list view
         .sort(sortOptions[sortBy] || sortOptions.newest)
         .skip(skip)
         .limit(parseInt(limit)),
