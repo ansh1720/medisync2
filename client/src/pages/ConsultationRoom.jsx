@@ -28,6 +28,7 @@ function ConsultationRoom() {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const localStreamRef = useRef(null);
+  const iceCandidatesQueueRef = useRef([]);
 
   // State
   const [consultation, setConsultation] = useState(null);
@@ -144,6 +145,21 @@ function ConsultationRoom() {
     }
   });
 
+  // Drain queued ICE candidates once remote description is set
+  const drainIceCandidatesQueue = async () => {
+    const pc = pcRef.current;
+    if (pc && pc.remoteDescription && pc.remoteDescription.type) {
+      while (iceCandidatesQueueRef.current.length > 0) {
+        const candidate = iceCandidatesQueueRef.current.shift();
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (err) {
+          console.error('Error adding queued ICE candidate:', err);
+        }
+      }
+    }
+  };
+
   // ─── Socket.IO + WebRTC ───
   const connectSocket = useCallback(() => {
     const socket = io(SOCKET_URL, { transports: ['websocket', 'polling'] });
@@ -172,6 +188,10 @@ function ConsultationRoom() {
       try {
         const pc = createPeerConnection();
         await pc.setRemoteDescription(new RTCSessionDescription(signal));
+        
+        // Drain any ICE candidates received early
+        await drainIceCandidatesQueue();
+
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         socket.emit('call_answer', { consultationId, signal: answer });
@@ -185,6 +205,8 @@ function ConsultationRoom() {
       try {
         if (pcRef.current) {
           await pcRef.current.setRemoteDescription(new RTCSessionDescription(signal));
+          // Drain any ICE candidates received early
+          await drainIceCandidatesQueue();
         }
       } catch (err) {
         console.error('Error handling answer:', err);
@@ -194,8 +216,14 @@ function ConsultationRoom() {
     // ICE candidates
     socket.on('ice_candidate', async ({ candidate }) => {
       try {
-        if (pcRef.current && candidate) {
-          await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+        if (candidate) {
+          const pc = pcRef.current;
+          if (pc && pc.remoteDescription && pc.remoteDescription.type) {
+            await pc.addIceCandidate(new RTCIceCandidate(candidate));
+          } else {
+            // Queue candidates received before remote description is set
+            iceCandidatesQueueRef.current.push(candidate);
+          }
         }
       } catch (err) {
         console.error('ICE error:', err);
@@ -225,6 +253,7 @@ function ConsultationRoom() {
   // ─── WebRTC Peer Connection ───
   const createPeerConnection = () => {
     if (pcRef.current) pcRef.current.close();
+    iceCandidatesQueueRef.current = []; // Clear queue for new connection
 
     const pc = new RTCPeerConnection(ICE_SERVERS);
     pcRef.current = pc;
@@ -238,10 +267,16 @@ function ConsultationRoom() {
 
     // Handle remote tracks
     pc.ontrack = (event) => {
-      if (remoteVideoRef.current && event.streams[0]) {
-        remoteVideoRef.current.srcObject = event.streams[0];
-        // Force play on mobile browsers
-        remoteVideoRef.current.play().catch(() => {});
+      if (remoteVideoRef.current) {
+        // Fallback if event.streams is empty
+        const stream = event.streams[0] || new MediaStream();
+        if (remoteVideoRef.current.srcObject !== stream) {
+          remoteVideoRef.current.srcObject = stream;
+          remoteVideoRef.current.play().catch(() => {});
+        }
+        if (!event.streams[0]) {
+          remoteVideoRef.current.srcObject.addTrack(event.track);
+        }
         setRemoteConnected(true);
       }
     };
