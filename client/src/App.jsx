@@ -1,10 +1,11 @@
 import { useEffect, Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import { InteractionProvider } from './context/InteractionContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import RoleBasedRedirect from './components/RoleBasedRedirect';
+import Footer from './components/Footer';
 
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
@@ -44,12 +45,27 @@ function RouteHandler() {
   return null;
 }
 
+// Main layout helper to conditionally render footer (e.g. hide on full-screen video consultation room)
+function MainLayout({ children }) {
+  const location = useLocation();
+  const hideFooter = location.pathname.startsWith('/consultation/room');
+
+  return (
+    <div className="flex flex-col min-h-screen w-full">
+      <div className="flex-grow w-full flex flex-col">
+        {children}
+      </div>
+      {!hideFooter && <Footer />}
+    </div>
+  );
+}
+
 function App() {
   return (
     <AuthProvider>
       <InteractionProvider>
         <Router basename="/medisync2">
-          <div className="App">
+          <div className="App flex flex-col min-h-screen">
             <Toaster
             position="top-right"
             toastOptions={{
@@ -69,6 +85,7 @@ function App() {
           
           <RouteHandler />
           
+          <MainLayout>
           <Suspense fallback={
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: '#0f172a', color: '#38bdf8' }}>
               <div style={{ fontSize: '1.25rem', fontWeight: '500' }}>Loading MediSync...</div>
@@ -234,6 +251,7 @@ function App() {
               <Route path="*" element={<RoleBasedRedirect />} />
             </Routes>
           </Suspense>
+          </MainLayout>
         </div>
       </Router>
       </InteractionProvider>
