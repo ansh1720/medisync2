@@ -112,7 +112,6 @@ app.get('/api', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/diseases', diseaseRoutes);
 app.use('/api/risk', require('./routes/riskRoutes'));
-app.use('/api/equipment', require('./routes/equipmentRoutes'));
 app.use('/api/hospitals', require('./routes/hospitalRoutes'));
 app.use('/api/consultation', require('./routes/consultationRoutes'));
 app.use('/api/forum', require('./routes/forumRoutes'));

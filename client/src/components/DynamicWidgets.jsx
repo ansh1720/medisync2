@@ -137,15 +137,6 @@ export const PersonalizedActionsWidget = () => {
         color: 'indigo',
         href: '/hospitals',
         usage: userInteractions.hospitalLocator || 0
-      },
-      {
-        id: 'equipmentReadings',
-        title: 'Health Readings',
-        description: 'Track vital signs',
-        icon: BeakerIcon,
-        color: 'red',
-        href: '/equipment',
-        usage: userInteractions.equipmentReadings || 0
       }
     ];
 
@@ -387,7 +378,6 @@ export const FeatureDiscoveryWidget = () => {
     { id: 'consultations', name: 'Consultations', description: 'Book doctor appointments' },
     { id: 'riskAssessment', name: 'Risk Assessment', description: 'Evaluate health risks' },
     { id: 'hospitalLocator', name: 'Hospital Locator', description: 'Find nearby hospitals' },
-    { id: 'equipmentReadings', name: 'Vital Signs', description: 'Track health metrics' },
     { id: 'communityForum', name: 'Community', description: 'Connect with others' },
     { id: 'healthNews', name: 'Health News', description: 'Stay informed' }
   ];

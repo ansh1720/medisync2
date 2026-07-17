@@ -18,7 +18,6 @@ export const InteractionProvider = ({ children }) => {
     consultations: 0,
     hospitalLocator: 0,
     prescriptions: 0,
-    equipmentReadings: 0,
     communityForum: 0,
     healthNews: 0,
     
@@ -142,7 +141,6 @@ export const InteractionProvider = ({ children }) => {
         consultations: prev.consultations || 0,
         hospitalLocator: prev.hospitalLocator || 0,
         prescriptions: prev.prescriptions || 0,
-        equipmentReadings: prev.equipmentReadings || 0,
         communityForum: prev.communityForum || 0,
         healthNews: prev.healthNews || 0
       };

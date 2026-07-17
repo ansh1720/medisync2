@@ -14,7 +14,6 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const DoctorDashboard = lazy(() => import('./pages/DoctorDashboard'));
 const RiskAssessment = lazy(() => import('./pages/RiskAssessment'));
-const EquipmentReadings = lazy(() => import('./pages/EquipmentReadings'));
 const HospitalLocator = lazy(() => import('./pages/HospitalLocator'));
 const DoctorDiscovery = lazy(() => import('./pages/DoctorDiscovery'));
 const BookingPage = lazy(() => import('./pages/BookingPage'));
@@ -151,14 +150,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/equipment"
-                element={
-                  <ProtectedRoute>
-                    <EquipmentReadings />
-                  </ProtectedRoute>
-                }
-              />
+
               <Route
                 path="/hospitals"
                 element={

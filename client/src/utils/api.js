@@ -125,12 +125,6 @@ export const consultationAPI = {
   addPrescription: (id, data) => api.post(`/consultation/${id}/prescription`, data),
 };
 
-// Equipment API
-export const equipmentAPI = {
-  addReading: (data) => api.post('/equipment/readings', data),
-  getReadings: () => api.get('/equipment/readings'),
-  getAnalytics: () => api.get('/equipment/analytics'),
-};
 
 // Forum API
 export const forumAPI = {

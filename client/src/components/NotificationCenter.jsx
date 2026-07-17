@@ -59,8 +59,8 @@ const MOCK_NOTIFICATIONS = [
     timestamp: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
     isRead: false,
     priority: 'high',
-    actionUrl: '/equipment',
-    actionText: 'View Reading'
+    actionUrl: '/risk',
+    actionText: 'Check Risk'
   },
   {
     _id: '2',
