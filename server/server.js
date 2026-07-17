@@ -189,4 +189,4 @@ server.listen(PORT, () => {
   console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
 });
 
-module.exports = app;
+module.exports = app; // trigger reload
