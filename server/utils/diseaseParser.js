@@ -458,4 +458,10 @@ class DiseaseDataParser {
   }
 }
 
-module.exports = DiseaseDataParser;
+// Create and initialize singleton instance
+const diseaseParserInstance = new DiseaseDataParser();
+diseaseParserInstance.loadData()
+  .then(() => console.log('✅ Disease parser initialized and CSV data loaded'))
+  .catch(err => console.error('❌ Failed to initialize disease parser:', err));
+
+module.exports = diseaseParserInstance;
