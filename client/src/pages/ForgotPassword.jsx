@@ -15,7 +15,7 @@ function ForgotPassword() {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSendOTP = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
 
     if (!email) {
       toast.error('Please enter your email address');
@@ -237,10 +237,11 @@ function ForgotPassword() {
             <div className="flex justify-between">
               <button
                 type="button"
-                onClick={() => { setStep(1); setOtp(''); }}
-                className="text-sm font-medium text-gray-600 hover:text-gray-500"
+                onClick={() => handleSendOTP()}
+                disabled={isLoading}
+                className="text-sm font-medium text-primary-600 hover:text-primary-500 disabled:opacity-50"
               >
-                Resend OTP
+                {isLoading ? 'Sending...' : 'Resend OTP'}
               </button>
               <Link to="/login" className="text-sm font-medium text-primary-600 hover:text-primary-500">
                 Back to Login

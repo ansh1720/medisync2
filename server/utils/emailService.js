@@ -1,26 +1,48 @@
 const sgMail = require('@sendgrid/mail');
+const nodemailer = require('nodemailer');
 
 /**
- * Email Service using SendGrid Web API
- * More reliable than SMTP for cloud deployments like Render
+ * Email Service using SendGrid Web API with Nodemailer SMTP fallback
  */
 class EmailService {
   constructor() {
     this.initialized = false;
+    this.useSmtp = false;
+    this.smtpTransporter = null;
     this.init();
   }
 
   init() {
     try {
-      if (!process.env.SMTP_PASS) {
+      const pass = process.env.SMTP_PASS;
+      if (!pass) {
         this.initialized = false;
         return;
       }
 
-      // Initialize SendGrid with API key
-      sgMail.setApiKey(process.env.SMTP_PASS);
-      this.initialized = true;
+      if (pass.startsWith('SG.')) {
+        // Initialize SendGrid with API key
+        sgMail.setApiKey(pass);
+        this.initialized = true;
+        this.useSmtp = false;
+        console.log('✉️ Email service initialized with SendGrid');
+      } else {
+        // Initialize Nodemailer SMTP with Gmail app password or standard SMTP
+        this.smtpTransporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST || 'smtp.gmail.com',
+          port: parseInt(process.env.SMTP_PORT) || 587,
+          secure: parseInt(process.env.SMTP_PORT) === 465,
+          auth: {
+            user: process.env.SMTP_USER,
+            pass: pass
+          }
+        });
+        this.initialized = true;
+        this.useSmtp = true;
+        console.log('✉️ Email service initialized with SMTP (Nodemailer)');
+      }
     } catch (error) {
+      console.error('❌ Failed to initialize email service:', error);
       this.initialized = false;
     }
   }
@@ -33,6 +55,7 @@ class EmailService {
    */
   async sendPasswordResetOTP(toEmail, otp, userName = 'User') {
     if (!this.initialized) {
+      console.warn('⚠️ Email service is not initialized');
       return;
     }
 
@@ -75,19 +98,40 @@ class EmailService {
       </html>
     `;
 
-    const msg = {
-      to: toEmail,
-      from: process.env.FROM_EMAIL || 'noreply@medisync.com',
-      subject: '🔑 MediSync - Password Reset Verification Code',
-      html: emailHtml,
-      text: `MediSync Password Reset\n\nHi ${userName},\n\nYour verification code is: ${otp}\n\nThis code expires in 10 minutes.\n\nIf you didn't request this, please ignore this email.\n\nMediSync Team`
-    };
+    if (this.useSmtp) {
+      const mailOptions = {
+        from: process.env.FROM_EMAIL || `"MediSync Support" <${process.env.SMTP_USER}>`,
+        to: toEmail,
+        subject: '🔑 MediSync - Password Reset Verification Code',
+        html: emailHtml,
+        text: `MediSync Password Reset\n\nHi ${userName},\n\nYour verification code is: ${otp}\n\nThis code expires in 10 minutes.\n\nIf you didn't request this, please ignore this email.\n\nMediSync Team`
+      };
 
-    try {
-      const response = await sgMail.send(msg);
-      return { success: true };
-    } catch (error) {
-      throw error;
+      try {
+        await this.smtpTransporter.sendMail(mailOptions);
+        console.log(`✉️ Password reset OTP sent successfully via SMTP to ${toEmail}`);
+        return { success: true };
+      } catch (error) {
+        console.error('❌ SMTP sendMail error:', error);
+        throw error;
+      }
+    } else {
+      const msg = {
+        to: toEmail,
+        from: process.env.FROM_EMAIL || 'noreply@medisync.com',
+        subject: '🔑 MediSync - Password Reset Verification Code',
+        html: emailHtml,
+        text: `MediSync Password Reset\n\nHi ${userName},\n\nYour verification code is: ${otp}\n\nThis code expires in 10 minutes.\n\nIf you didn't request this, please ignore this email.\n\nMediSync Team`
+      };
+
+      try {
+        await sgMail.send(msg);
+        console.log(`✉️ Password reset OTP sent successfully via SendGrid to ${toEmail}`);
+        return { success: true };
+      } catch (error) {
+        console.error('❌ SendGrid send error:', error);
+        throw error;
+      }
     }
   }
 }
